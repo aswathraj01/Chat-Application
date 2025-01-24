@@ -1,278 +1,367 @@
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
-void main() {
-  runApp(MyApp());
-}
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
 
-
-class MyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.light; // Default theme is light mode
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  List<Map<String, String>> chatMessages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+  ];
+  bool isDarkMode = false;
+  bool showHistory = false;
+  final List<List<Map<String, String>>> chatHistory = [];
+  double fontSize = 16;
+  String username = "Loading..."; // Default username
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
 
-  void _toggleTheme() {
+  // Function to fetch the user info from the backend (Django)
+  Future<void> fetchUserInfo() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            "http://localhost:8000/api/userinfo/"), // Your Django API endpoint
+        headers: {
+          "Authorization": "Bearer your_token_here"
+        }, // Add your authentication token
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          username = data['username'] ?? "Unknown User"; // Set the username
+        });
+      }
+    } catch (e) {
+      setState(() {
+        username = "Error fetching user"; // In case of error
+      });
+    }
+  }
+
+  Future<void> query(String prompt) async {
+    final message = {
+      "role": "user",
+      "content": prompt,
+    };
+
+    chatMessages.add(message);
+
+    final data = {
+      "model": "llama3.2",
+      "messages": chatMessages,
+      "stream": false,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse("http://localhost:11434/api/chat"),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode(data),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        chatMessages.add(
+          {
+            "role": "system",
+            "content": responseData["message"]["content"],
+          },
+        );
+
+        _controller.clear();
+        setState(() {});
+      } else {
+        chatMessages.remove(message);
+        setState(() {});
+      }
+    } catch (e) {
+      chatMessages.remove(message);
+    }
+  }
+
+  void _startNewChat() {
     setState(() {
-      _themeMode =
-          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+      chatHistory.add(List<Map<String, String>>.from(chatMessages));
+      chatMessages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+      ];
+      _controller.clear();
     });
+  }
+
+  void _toggleDarkMode() {
+    setState(() {
+      isDarkMode = !isDarkMode;
+    });
+  }
+
+  void _toggleHistoryView() {
+    setState(() {
+      showHistory = !showHistory;
+    });
+  }
+
+  void _saveUserSettings() {
+    // You can implement an API call to save the settings
+    final updatedData = {
+      'username': usernameController.text,
+      'password': passwordController.text,
+      'email': emailController.text,
+    };
+    // Send a PUT request to update user details on the backend
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserInfo();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: _themeMode,
-      home: ChatScreen(toggleTheme: _toggleTheme, themeMode: _themeMode),
-    );
-  }
-}
-
-class ChatScreen extends StatefulWidget {
-  final VoidCallback toggleTheme;
-  final ThemeMode themeMode;
-
-  ChatScreen({required this.toggleTheme, required this.themeMode});
-
-  @override
-  _ChatScreenState createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  TextEditingController _messageController = TextEditingController();
-  bool _isTyping = false; // Tracks if user is typing
-  bool _isListening = false; // Tracks if speech recognition is listening
-  String _speechText = ""; // Holds the recognized speech
-  List<Message> _messages = []; // Holds chat messages
-  stt.SpeechToText _speechToText = stt.SpeechToText(); // Speech-to-text object
-
-  void _handleTextChange(String text) {
-    setState(() {
-      _isTyping = text.isNotEmpty;
-    });
-  }
-
-  void _startListening() async {
-    bool available = await _speechToText.initialize();
-    if (available) {
-      setState(() {
-        _isListening = true;
-      });
-      _speechToText.listen(onResult: (result) {
-        setState(() {
-          _speechText = result.recognizedWords;
-        });
-      });
-    }
-  }
-
-  void _stopListening() {
-    _speechToText.stop();
-    setState(() {
-      _isListening = false;
-      _messages.add(Message(text: _speechText, isUser: true)); // User's message
-      _speechText = ""; // Reset speech text after adding to messages
-    });
-    // Simulate an AI response
-    _simulateIncomingMessage();
-  }
-
-  void _simulateIncomingMessage() {
-    Future.delayed(Duration(seconds: 2), () {
-      setState(() {
-        _messages.add(Message(text: "test done", isUser: false)); // AI's response
-      });
-    });
-  }
-
-  void showAboutDetails(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("About Ai Chat Application"),
-          content: Text(
-              "This application is built with Flutter. I am learning Flutter by building the user interface for the application."),
+      theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text("Ai Chat App"),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("Close"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("My Chat AI"),
-        backgroundColor: Colors.teal,
-        leading: Builder(
-          builder: (context) {
-            return IconButton(
-              icon: Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(context).openDrawer(); // Opens the drawer
-              },
-            );
-          },
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 30.0),
-            child: IconButton(
-              icon: Icon(
-                widget.themeMode == ThemeMode.light
-                    ? Icons.dark_mode
-                    : Icons.light_mode,
-              ),
-              onPressed: widget.toggleTheme, // Toggle theme button in AppBar
-            ),
-          )
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.teal,
-              ),
-              child: Text(
-                "Menu",
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text("Settings"),
-              onTap: () {
-                // Handle Settings tap
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.info),
-              title: Text("About"),
-              onTap: () {
-                Navigator.of(context).pop();
-                showAboutDetails(context); // Handle About tap
-              },
-            ),
-            Divider(),
-            ListTile(
-              leading: Icon(Icons.brightness_6),
-              title: Text("Toggle Dark Mode"),
-              onTap: widget.toggleTheme, // Call the toggle theme function
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // Chat messages area
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.all(10),
-              itemCount: _messages.length, // Use dynamic list length
-              itemBuilder: (context, index) {
-                Message message = _messages[index];
-                return Align(
-                  alignment: message.isUser
-                      ? Alignment.centerLeft
-                      : Alignment.centerRight,
-                  child: Container(
-                    margin: EdgeInsets.symmetric(vertical: 5),
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: message.isUser
-                          ? Colors.grey[300]
-                          : Colors.teal[100],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      message.text,
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // Bottom input area
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            color: Colors.grey[200],
-            child: Row(
-              children: [
-                // Text input field
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    onChanged: _handleTextChange,
-                    decoration: InputDecoration(
-                      hintText: "Type a message",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'New Chat') {
+                  _startNewChat();
+                } else if (value == 'Settings') {
+                  // Navigate to settings page
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text("Settings"),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("Font Size:"),
+                          Slider(
+                            value: fontSize,
+                            min: 12,
+                            max: 30,
+                            onChanged: (newSize) {
+                              setState(() {
+                                fontSize = newSize;
+                              });
+                            },
+                          ),
+                          Text("Username:"),
+                          TextField(
+                            controller: usernameController..text = username,
+                          ),
+                          Text("Password:"),
+                          TextField(
+                            controller: passwordController,
+                            obscureText: true,
+                          ),
+                          Text("Email:"),
+                          TextField(
+                            controller: emailController,
+                          ),
+                          ElevatedButton(
+                            onPressed: _saveUserSettings,
+                            child: Text("Save Settings"),
+                          ),
+                        ],
                       ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 15),
                     ),
+                  );
+                } else if (value == 'Toggle Dark Mode') {
+                  _toggleDarkMode();
+                } else if (value == 'View History') {
+                  _toggleHistoryView();
+                } else if (value == 'About') {
+                  showAboutDialog(
+                    context: context,
+                    applicationName: 'Ai Chat Application',
+                    applicationVersion: '1.1.3',
+                    children: [
+                      Text(
+                          'This is a chat app powered by Llama AI and uses Ollama Model 3.2')
+                    ],
+                  );
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'New Chat',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('New Chat'),
+                    ],
                   ),
                 ),
-
-                SizedBox(width: 10),
-
-                // Dynamic mic/send button
-                IconButton(
-                  icon: Icon(
-                    _isTyping ? Icons.send : Icons.mic,
-                    color: Colors.teal,
+                PopupMenuItem(
+                  value: 'Settings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.settings, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Settings'),
+                    ],
                   ),
-                  onPressed: () {
-                    if (_isTyping) {
-                      // Handle send button press
-                      setState(() {
-                        _messages.add(Message(
-                          text: _messageController.text,
-                          isUser: true,
-                        ));
-                        _messageController.clear();
-                        _handleTextChange(""); // Reset typing state
-                      });
-                      _simulateIncomingMessage(); // Simulate response
-                    } else {
-                      // Handle mic button press
-                      if (!_isListening) {
-                        _startListening();
-                      } else {
-                        _stopListening();
-                      }
-                    }
-                  },
+                ),
+                PopupMenuItem(
+                  value: 'Toggle Dark Mode',
+                  child: Row(
+                    children: [
+                      Icon(Icons.dark_mode, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Toggle Dark Mode'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'View History',
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('View History'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'About',
+                  child: Row(
+                    children: [
+                      Icon(Icons.info, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('About'),
+                    ],
+                  ),
                 ),
               ],
             ),
+          ],
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: showHistory
+                ? Column(
+                    children: [
+                      Text(
+                        'Chat History',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: chatHistory.length,
+                          itemBuilder: (context, index) {
+                            return Card(
+                              margin: EdgeInsets.symmetric(vertical: 8),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: chatHistory[index].map((msg) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4.0),
+                                      child: Text(
+                                        "${msg['role']}: ${msg['content']}",
+                                        style: TextStyle(fontSize: fontSize),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: _toggleHistoryView,
+                        child: Text('Back to Chat'),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: chatMessages.length,
+                          itemBuilder: (context, index) {
+                            if (index == 0) return SizedBox.shrink();
+                            final message = chatMessages[index];
+
+                            // Define the colors for light and dark mode
+                            final messageColor = message["role"] == 'system'
+                                ? (isDarkMode
+                                    ? Colors.grey[900]
+                                    : Colors.grey[200])
+                                : (isDarkMode
+                                    ? Colors.deepPurple[800]
+                                    : Colors.blue[300]);
+
+                            final textColor = message["role"] == 'system'
+                                ? (isDarkMode ? Colors.white : Colors.black)
+                                : (isDarkMode ? Colors.white : Colors.black);
+
+                            return Align(
+                              alignment: message["role"] == 'system'
+                                  ? Alignment.centerLeft
+                                  : Alignment.centerRight,
+                              child: Container(
+                                margin: EdgeInsets.symmetric(vertical: 8),
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: messageColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  message["content"] ?? '',
+                                  style: TextStyle(
+                                      color: textColor, fontSize: fontSize),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      TextField(
+                        controller: _controller,
+                        decoration: InputDecoration(
+                          labelText: "Enter your prompt",
+                          border: OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              if (_controller.text.isNotEmpty) {
+                                query(_controller.text);
+                              }
+                            },
+                            icon: Icon(
+                              Icons.send,
+                              color: Colors.lightGreen,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
-        ],
+        ),
       ),
     );
   }
-}
-
-class Message {
-  final String text;
-  final bool isUser; // True if message is from user, false if from AI
-
-  Message({required this.text, required this.isUser});
 }
