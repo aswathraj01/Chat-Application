@@ -72,4 +72,4 @@ my_project/
 │
 ├── .gitignore                         # Git ignore file for Flutter
 └── README.md                          # Project description and setup instructions
-.
+..
