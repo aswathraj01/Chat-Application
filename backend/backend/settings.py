@@ -15,15 +15,12 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# settings.py
-AUTH_USER_MODEL = 'accounts.UserProfile'  # Replace 'accounts' with your actual app name if needed
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ye8t%3we(^4y&da6ivvqri856knpg+d_pp6k_4v-n0irppf%!y'
+SECRET_KEY = 'django-insecure-f4-ugen*i1gba8b-$x7goy-mh!i)s42^2=e*a4)zoeg@vt+7*9'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -41,17 +38,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    #apps
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'accounts',
+    'chat',  # Add your app name here
+
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-}
+# Add AUTH_USER_MODEL here
+AUTH_USER_MODEL = 'chat.User'  # Replace 'chat' with your app name
 
 
 MIDDLEWARE = [
@@ -91,11 +83,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'aichat',
+        'NAME': 'llama_chat_db',
         'USER': 'root',
         'PASSWORD': 'root',
-        'HOST': 'localhost',  # Or the host of your database server
-        'PORT': '3307',  # Default port for MySQL
+        'HOST': 'localhost',
+        'PORT': '3307',
     }
 }
 

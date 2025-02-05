@@ -22,10 +22,8 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      initialRoute: '/login', // Set initial route to login screen
+      initialRoute: '/chat', // Set initial route to login screen
       routes: {
-        '/login': (context) => LoginScreen(),  // Login Screen route
-        '/signup': (context) => SignupScreen(),  // Signup Screen route
         '/chat': (context) => ChatScreen(),  // Chat Screen route
       },
     );

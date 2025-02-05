@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -23,26 +24,98 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
 
+  // Speech-to-Text
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String _recognizedText = '';
+  bool _isMicPressed = false; // Track if mic button is pressed
+  bool _isSendPressed = false; // Track if send button is pressed
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserInfo();
+    _speech = stt.SpeechToText();
+    _initializeSpeech();
+  }
+
+  // Initialize speech recognition
+  void _initializeSpeech() async {
+    bool available = await _speech.initialize();
+    if (available) {
+      setState(() {});
+    } else {
+      print("Speech recognition not available");
+    }
+  }
+
+  // Start listening to user's voice
+  void _startListening() async {
+    if (!_isListening) {
+      setState(() {
+        _isListening = true;
+        _isMicPressed = true; // Mic button is pressed
+      });
+      _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _recognizedText = result.recognizedWords;
+          });
+        },
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: true, // Enable partial results
+        ),
+      );
+      print("Started listening...");
+    }
+  }
+
+  // Stop listening
+  void _stopListening() async {
+    if (_isListening) {
+      setState(() {
+        _isListening = false;
+        _isMicPressed = false; // Mic button is released
+      });
+      _speech.stop();
+      if (_recognizedText.isNotEmpty) {
+        query(_recognizedText); // Directly send the recognized text
+        _recognizedText = ''; // Clear the recognized text
+      }
+      print("Stopped listening...");
+    }
+  }
+
+  // Cancel listening
+  void _cancelListening() {
+    if (_isListening) {
+      setState(() {
+        _isListening = false;
+        _isMicPressed = false; // Mic button is released
+        _recognizedText = ''; // Clear the recognized text
+      });
+      _speech.stop();
+      print("Cancelled listening...");
+    }
+  }
+
   // Function to fetch the user info from the backend (Django)
   Future<void> fetchUserInfo() async {
     try {
       final response = await http.get(
-        Uri.parse(
-            "http://localhost:8000/api/userinfo/"), // Your Django API endpoint
-        headers: {
-          "Authorization": "Bearer your_token_here"
-        }, // Add your authentication token
+        Uri.parse("http://localhost:8000/api/userinfo/"),
+        headers: {"Authorization": "Bearer your_token_here"},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          username = data['username'] ?? "Unknown User"; // Set the username
+          username = data['username'] ?? "Unknown User";
         });
       }
     } catch (e) {
       setState(() {
-        username = "Error fetching user"; // In case of error
+        username = "Error fetching user";
       });
     }
   }
@@ -121,13 +194,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    fetchUserInfo();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Define button colors based on dark mode
+    final buttonColor = isDarkMode ? Colors.deepPurple[800] : Colors.blue;
+
     return MaterialApp(
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
       home: Scaffold(
@@ -179,7 +249,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   );
-                } else if (value == 'Toggle Dark Mode') {
+                } else if (value == 'Toggle Dark Mode' || value == 'Toggle Light Mode') {
                   _toggleDarkMode();
                 } else if (value == 'View History') {
                   _toggleHistoryView();
@@ -217,12 +287,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 PopupMenuItem(
-                  value: 'Toggle Dark Mode',
+                  value: isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode',
                   child: Row(
                     children: [
                       Icon(Icons.dark_mode, color: Colors.blue),
                       SizedBox(width: 8),
-                      Text('Toggle Dark Mode'),
+                      Text(isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode'),
                     ],
                   ),
                 ),
@@ -339,23 +409,95 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       ),
                       SizedBox(height: 20),
-                      TextField(
-                        controller: _controller,
-                        decoration: InputDecoration(
-                          labelText: "Enter your prompt",
-                          border: OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            onPressed: () {
-                              if (_controller.text.isNotEmpty) {
-                                query(_controller.text);
-                              }
-                            },
-                            icon: Icon(
-                              Icons.send,
-                              color: Colors.lightGreen,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              decoration: InputDecoration(
+                                labelText: "Enter your prompt",
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (text) {
+                                setState(() {});
+                              },
+                              onSubmitted: (text) {
+                                if (_controller.text.isNotEmpty) {
+                                  query(_controller.text);
+                                }
+                              },
                             ),
                           ),
-                        ),
+                          SizedBox(width: 8),
+                          // Show mic button only when text field is empty
+                          if (_controller.text.isEmpty)
+                            GestureDetector(
+                              onLongPressStart: (_) {
+                                _startListening();
+                              },
+                              onLongPressEnd: (_) {
+                                _stopListening();
+                              },
+                              onHorizontalDragEnd: (details) {
+                                // Swipe left to cancel
+                                if (details.primaryVelocity! < 0) {
+                                  _cancelListening();
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: _isMicPressed
+                                      ? Colors.grey[300] // Light gray when pressed
+                                      : buttonColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.mic,
+                                  color: _isMicPressed
+                                      ? Colors.grey[600] // Darker gray for icon
+                                      : Colors.white,
+                                ),
+                              ),
+                            ),
+                          // Show send button only when text field is not empty
+                          if (_controller.text.isNotEmpty)
+                            GestureDetector(
+                              onTapDown: (_) {
+                                setState(() {
+                                  _isSendPressed = true;
+                                });
+                              },
+                              onTapUp: (_) {
+                                setState(() {
+                                  _isSendPressed = false;
+                                });
+                                if (_controller.text.isNotEmpty) {
+                                  query(_controller.text);
+                                }
+                              },
+                              onTapCancel: () {
+                                setState(() {
+                                  _isSendPressed = false;
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: _isSendPressed
+                                      ? Colors.grey[300] // Light gray when pressed
+                                      : buttonColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.send,
+                                  color: _isSendPressed
+                                      ? Colors.grey[600] // Darker gray for icon
+                                      : Colors.white,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
