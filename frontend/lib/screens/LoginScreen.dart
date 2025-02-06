@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'chat_screen.dart'; // Import your chat screen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,67 +14,106 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _storage = const FlutterSecureStorage();
+  bool _isLoading = false;
 
   Future<void> _login() async {
-    final response = await http.post(
-      Uri.parse("http://127.0.0.1:8000/api/login/"), // Django API URL
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'email': _emailController.text,
-        'password': _passwordController.text,
-      }),
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (response.statusCode == 200) {
-      // Handle successful login, navigate to the chat screen
-      Navigator.pushReplacementNamed(context, '/chat');
-    } else {
-      // Handle login error
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Login Failed'),
-          content: Text('Invalid email or password'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('OK'),
-            ),
-          ],
-        ),
+    try {
+      final response = await http.post(
+        Uri.parse("http://localhost:8000/api/login/"),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': _emailController.text,
+          'password': _passwordController.text,
+        }),
       );
+
+      if (response.statusCode == 200) {
+        // Parse tokens from response
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        final String accessToken = responseData['access'];
+        final String refreshToken = responseData['refresh'];
+
+        // Save tokens securely
+        await _storage.write(key: 'access_token', value: accessToken);
+        await _storage.write(key: 'refresh_token', value: refreshToken);
+
+        // Navigate to chat screen
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ChatScreen()),
+        );
+      } else {
+        // Handle login error
+        if (!mounted) return;
+        _showErrorDialog('Login Failed', 'Invalid email or password');
+      }
+    } catch (e) {
+      // Handle network errors
+      if (!mounted) return;
+      _showErrorDialog('Error', 'Failed to connect to the server');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
+      appBar: AppBar(title: const Text('Login')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: const InputDecoration(labelText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _login,
-              child: Text('Login'),
-            ),
+            const SizedBox(height: 20),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: _login,
+                    child: const Text('Login'),
+                  ),
             TextButton(
               onPressed: () {
                 Navigator.pushNamed(context, '/signup');
               },
-              child: Text('Don\'t have an account? Sign Up'),
+              child: const Text('Don\'t have an account? Sign Up'),
             ),
           ],
         ),

@@ -19,7 +19,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool showHistory = false;
   final List<List<Map<String, String>>> chatHistory = [];
   double fontSize = 16;
-  String username = "Loading..."; // Default username
+  String username = "Loading...";
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -28,8 +28,11 @@ class _ChatScreenState extends State<ChatScreen> {
   late stt.SpeechToText _speech;
   bool _isListening = false;
   String _recognizedText = '';
-  bool _isMicPressed = false; // Track if mic button is pressed
-  bool _isSendPressed = false; // Track if send button is pressed
+  bool _isMicPressed = false;
+  bool _isSendPressed = false;
+
+  // ScrollController
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -39,7 +42,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _initializeSpeech();
   }
 
-  // Initialize speech recognition
   void _initializeSpeech() async {
     bool available = await _speech.initialize();
     if (available) {
@@ -49,57 +51,43 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Start listening to user's voice
   void _startListening() async {
     if (!_isListening) {
       setState(() {
         _isListening = true;
-        _isMicPressed = true; // Mic button is pressed
+        _isMicPressed = true;
       });
       _speech.listen(
-        onResult: (result) {
-          setState(() {
-            _recognizedText = result.recognizedWords;
-          });
-        },
-        listenOptions: stt.SpeechListenOptions(
-          partialResults: true, // Enable partial results
-        ),
+        onResult: (result) => setState(() => _recognizedText = result.recognizedWords),
       );
-      print("Started listening...");
     }
   }
 
-  // Stop listening
   void _stopListening() async {
     if (_isListening) {
       setState(() {
         _isListening = false;
-        _isMicPressed = false; // Mic button is released
+        _isMicPressed = false;
       });
       _speech.stop();
       if (_recognizedText.isNotEmpty) {
-        query(_recognizedText); // Directly send the recognized text
-        _recognizedText = ''; // Clear the recognized text
+        _sendMessage(_recognizedText);
+        _recognizedText = '';
       }
-      print("Stopped listening...");
     }
   }
 
-  // Cancel listening
   void _cancelListening() {
     if (_isListening) {
       setState(() {
         _isListening = false;
-        _isMicPressed = false; // Mic button is released
-        _recognizedText = ''; // Clear the recognized text
+        _isMicPressed = false;
+        _recognizedText = '';
       });
       _speech.stop();
-      print("Cancelled listening...");
     }
   }
 
-  // Function to fetch the user info from the backend (Django)
   Future<void> fetchUserInfo() async {
     try {
       final response = await http.get(
@@ -120,14 +108,23 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> query(String prompt) async {
-    final message = {
-      "role": "user",
-      "content": prompt,
-    };
+  void _sendMessage(String message) {
+    if (message.isEmpty) return;
+    
+    // Clear input immediately
+    _controller.clear();
+    
+    // Add user message and scroll
+    setState(() {
+      chatMessages.add({"role": "user", "content": message});
+      _scrollToBottom();
+    });
 
-    chatMessages.add(message);
+    // Send to backend
+    _queryToLlama(message);
+  }
 
+  Future<void> _queryToLlama(String prompt) async {
     final data = {
       "model": "llama3.2",
       "messages": chatMessages,
@@ -143,59 +140,33 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        chatMessages.add(
-          {
+        setState(() {
+          chatMessages.add({
             "role": "system",
             "content": responseData["message"]["content"],
-          },
-        );
-
-        _controller.clear();
-        setState(() {});
+          });
+          _scrollToBottom();
+        });
       } else {
-        chatMessages.remove(message);
-        setState(() {});
+        setState(() => chatMessages.removeLast());
       }
     } catch (e) {
-      chatMessages.remove(message);
+      setState(() => chatMessages.removeLast());
     }
   }
 
-  void _startNewChat() {
-    setState(() {
-      chatHistory.add(List<Map<String, String>>.from(chatMessages));
-      chatMessages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-      ];
-      _controller.clear();
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
-  }
-
-  void _toggleDarkMode() {
-    setState(() {
-      isDarkMode = !isDarkMode;
-    });
-  }
-
-  void _toggleHistoryView() {
-    setState(() {
-      showHistory = !showHistory;
-    });
-  }
-
-  void _saveUserSettings() {
-    // You can implement an API call to save the settings
-    final updatedData = {
-      'username': usernameController.text,
-      'password': passwordController.text,
-      'email': emailController.text,
-    };
-    // Send a PUT request to update user details on the backend
   }
 
   @override
   Widget build(BuildContext context) {
-    // Define button colors based on dark mode
     final buttonColor = isDarkMode ? Colors.deepPurple[800] : Colors.blue;
 
     return MaterialApp(
@@ -209,7 +180,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (value == 'New Chat') {
                   _startNewChat();
                 } else if (value == 'Settings') {
-                  // Navigate to settings page
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -223,24 +193,18 @@ class _ChatScreenState extends State<ChatScreen> {
                             min: 12,
                             max: 30,
                             onChanged: (newSize) {
-                              setState(() {
-                                fontSize = newSize;
-                              });
+                              setState(() => fontSize = newSize);
                             },
                           ),
                           Text("Username:"),
-                          TextField(
-                            controller: usernameController..text = username,
-                          ),
+                          TextField(controller: usernameController..text = username),
                           Text("Password:"),
                           TextField(
                             controller: passwordController,
                             obscureText: true,
                           ),
                           Text("Email:"),
-                          TextField(
-                            controller: emailController,
-                          ),
+                          TextField(controller: emailController),
                           ElevatedButton(
                             onPressed: _saveUserSettings,
                             child: Text("Save Settings"),
@@ -259,8 +223,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     applicationName: 'Ai Chat Application',
                     applicationVersion: '1.1.3',
                     children: [
-                      Text(
-                          'This is a chat app powered by Llama AI and uses Ollama Model 3.2')
+                      Text('This is a chat app powered by Llama AI and uses Ollama Model 3.2')
                     ],
                   );
                 }
@@ -323,88 +286,18 @@ class _ChatScreenState extends State<ChatScreen> {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: showHistory
-                ? Column(
-                    children: [
-                      Text(
-                        'Chat History',
-                        style: TextStyle(
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: chatHistory.length,
-                          itemBuilder: (context, index) {
-                            return Card(
-                              margin: EdgeInsets.symmetric(vertical: 8),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: chatHistory[index].map((msg) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 4.0),
-                                      child: Text(
-                                        "${msg['role']}: ${msg['content']}",
-                                        style: TextStyle(fontSize: fontSize),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: _toggleHistoryView,
-                        child: Text('Back to Chat'),
-                      ),
-                    ],
-                  )
+            child: showHistory 
+                ? _buildHistoryView()
                 : Column(
                     children: [
                       Expanded(
                         child: ListView.builder(
+                          controller: _scrollController,
                           itemCount: chatMessages.length,
                           itemBuilder: (context, index) {
                             if (index == 0) return SizedBox.shrink();
                             final message = chatMessages[index];
-
-                            // Define the colors for light and dark mode
-                            final messageColor = message["role"] == 'system'
-                                ? (isDarkMode
-                                    ? Colors.grey[900]
-                                    : Colors.grey[200])
-                                : (isDarkMode
-                                    ? Colors.deepPurple[800]
-                                    : Colors.blue[300]);
-
-                            final textColor = message["role"] == 'system'
-                                ? (isDarkMode ? Colors.white : Colors.black)
-                                : (isDarkMode ? Colors.white : Colors.black);
-
-                            return Align(
-                              alignment: message["role"] == 'system'
-                                  ? Alignment.centerLeft
-                                  : Alignment.centerRight,
-                              child: Container(
-                                margin: EdgeInsets.symmetric(vertical: 8),
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: messageColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  message["content"] ?? '',
-                                  style: TextStyle(
-                                      color: textColor, fontSize: fontSize),
-                                ),
-                              ),
-                            );
+                            return _buildMessageBubble(message);
                           },
                         ),
                       ),
@@ -418,85 +311,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                 labelText: "Enter your prompt",
                                 border: OutlineInputBorder(),
                               ),
-                              onChanged: (text) {
-                                setState(() {});
-                              },
-                              onSubmitted: (text) {
-                                if (_controller.text.isNotEmpty) {
-                                  query(_controller.text);
-                                }
-                              },
+                              onSubmitted: _sendMessage,
                             ),
                           ),
                           SizedBox(width: 8),
-                          // Show mic button only when text field is empty
                           if (_controller.text.isEmpty)
-                            GestureDetector(
-                              onLongPressStart: (_) {
-                                _startListening();
-                              },
-                              onLongPressEnd: (_) {
-                                _stopListening();
-                              },
-                              onHorizontalDragEnd: (details) {
-                                // Swipe left to cancel
-                                if (details.primaryVelocity! < 0) {
-                                  _cancelListening();
-                                }
-                              },
-                              child: Container(
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _isMicPressed
-                                      ? Colors.grey[300] // Light gray when pressed
-                                      : buttonColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.mic,
-                                  color: _isMicPressed
-                                      ? Colors.grey[600] // Darker gray for icon
-                                      : Colors.white,
-                                ),
-                              ),
-                            ),
-                          // Show send button only when text field is not empty
+                            _buildMicButton(buttonColor!),
                           if (_controller.text.isNotEmpty)
-                            GestureDetector(
-                              onTapDown: (_) {
-                                setState(() {
-                                  _isSendPressed = true;
-                                });
-                              },
-                              onTapUp: (_) {
-                                setState(() {
-                                  _isSendPressed = false;
-                                });
-                                if (_controller.text.isNotEmpty) {
-                                  query(_controller.text);
-                                }
-                              },
-                              onTapCancel: () {
-                                setState(() {
-                                  _isSendPressed = false;
-                                });
-                              },
-                              child: Container(
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _isSendPressed
-                                      ? Colors.grey[300] // Light gray when pressed
-                                      : buttonColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.send,
-                                  color: _isSendPressed
-                                      ? Colors.grey[600] // Darker gray for icon
-                                      : Colors.white,
-                                ),
-                              ),
-                            ),
+                            _buildSendButton(buttonColor!),
                         ],
                       ),
                     ],
@@ -505,5 +327,128 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildMessageBubble(Map<String, String> message) {
+    final isSystem = message["role"] == 'system';
+    final messageColor = isSystem
+        ? (isDarkMode ? Colors.grey[900]! : Colors.grey[200]!)
+        : (isDarkMode ? Colors.deepPurple[800]! : Colors.blue[300]!);
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+
+    return Align(
+      alignment: isSystem ? Alignment.centerLeft : Alignment.centerRight,
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: messageColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          message["content"]!,
+          style: TextStyle(color: textColor, fontSize: fontSize),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMicButton(Color buttonColor) {
+    return GestureDetector(
+      onLongPressStart: (_) => _startListening(),
+      onLongPressEnd: (_) => _stopListening(),
+      onHorizontalDragEnd: (details) {
+        if (details.primaryVelocity! < 0) _cancelListening();
+      },
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _isMicPressed ? Colors.grey[300]! : buttonColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          Icons.mic,
+          color: _isMicPressed ? Colors.grey[600]! : Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSendButton(Color buttonColor) {
+    return GestureDetector(
+      onTap: () => _sendMessage(_controller.text),
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: buttonColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(Icons.send, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildHistoryView() {
+    return Column(
+      children: [
+        Text(
+          'Chat History',
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: chatHistory.length,
+            itemBuilder: (context, index) {
+              return Card(
+                margin: EdgeInsets.symmetric(vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: chatHistory[index].map((msg) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Text(
+                          "${msg['role']}: ${msg['content']}",
+                          style: TextStyle(fontSize: fontSize),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _toggleHistoryView,
+          child: Text('Back to Chat'),
+        ),
+      ],
+    );
+  }
+
+  void _startNewChat() {
+    setState(() {
+      chatHistory.add(List.from(chatMessages));
+      chatMessages = [
+        {"role": "system", "content": "You are a helpful assistant."}
+      ];
+    });
+  }
+
+  void _toggleDarkMode() => setState(() => isDarkMode = !isDarkMode);
+  void _toggleHistoryView() => setState(() => showHistory = !showHistory);
+  
+  void _saveUserSettings() {
+    final updatedData = {
+      'username': usernameController.text,
+      'password': passwordController.text,
+      'email': emailController.text,
+    };
+    // Implement API call to save settings
   }
 }
