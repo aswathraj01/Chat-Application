@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 
 # Load environment variables
@@ -26,6 +27,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-key-for-dev-only')
 
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Default: 5 minutes
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Default: 1 day
+}
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -34,12 +35,16 @@ class _ChatScreenState extends State<ChatScreen> {
   // ScrollController
   final ScrollController _scrollController = ScrollController();
 
+  // Secure storage for tokens
+  final _storage = const FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
     fetchUserInfo();
     _speech = stt.SpeechToText();
     _initializeSpeech();
+    _loadChatHistory(); // Load chat history on startup
   }
 
   void _initializeSpeech() async {
@@ -51,6 +56,71 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // Load chat history from backend
+  Future<void> _loadChatHistory() async {
+    try {
+      final String? accessToken = await _storage.read(key: 'access_token');
+      final response = await http.get(
+        Uri.parse("http://localhost:8000/api/chat/history/"),
+        headers: {"Authorization": "Bearer $accessToken"},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          chatHistory.clear();
+          chatHistory.addAll(data.map((session) {
+            return List<Map<String, String>>.from(
+              session['messages'].map((msg) => {
+                'role': msg['role'],
+                'content': msg['content']
+              })
+            );
+          }));
+        });
+      }
+    } catch (e) {
+      print("Error loading chat history: $e");
+    }
+  }
+
+  // Save chat session to backend
+  Future<void> _saveChatSession() async {
+  try {
+    final String? accessToken = await _storage.read(key: 'access_token');
+    if (accessToken == null) {
+      print("No access token found");
+      return;
+    }
+
+    final response = await http.post(
+      Uri.parse("http://localhost:8000/api/chat/save/"),
+      headers: {
+        "Authorization": "Bearer $accessToken",
+        "Content-Type": "application/json"
+      },
+      body: json.encode({
+        "messages": chatMessages.where((msg) => msg['role'] != 'system').toList()
+      }),
+    );
+
+    print("Save status: ${response.statusCode}");
+    print("Response body: ${response.body}");
+
+    if (response.statusCode == 201) {
+      await _loadChatHistory();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: ${response.body}')),
+      );
+    }
+  } catch (e) {
+    print("Save error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: ${e.toString()}')),
+    );
+  }
+}
   void _startListening() async {
     if (!_isListening) {
       setState(() {
@@ -120,6 +190,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     });
 
+    // Save chat session
+    _saveChatSession();
+
     // Send to backend
     _queryToLlama(message);
   }
@@ -147,6 +220,9 @@ class _ChatScreenState extends State<ChatScreen> {
           });
           _scrollToBottom();
         });
+
+        // Save chat session after AI response
+        _saveChatSession();
       } else {
         setState(() => chatMessages.removeLast());
       }
