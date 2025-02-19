@@ -4,6 +4,26 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+class ChatHistoryItem {
+  final String message;
+  final String response;
+  final String timestamp;
+
+  ChatHistoryItem({
+    required this.message,
+    required this.response,
+    required this.timestamp,
+  });
+
+  factory ChatHistoryItem.fromJson(Map<String, dynamic> json) {
+    return ChatHistoryItem(
+      message: json['message'],
+      response: json['response'],
+      timestamp: json['timestamp'],
+    );
+  }
+}
+
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -24,19 +44,13 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-
-  // Speech-to-Text
   late stt.SpeechToText _speech;
   bool _isListening = false;
   String _recognizedText = '';
   bool _isMicPressed = false;
-  bool _isSendPressed = false;
-
-  // ScrollController
   final ScrollController _scrollController = ScrollController();
-
-  // Secure storage for tokens
   final _storage = const FlutterSecureStorage();
+  List<ChatHistoryItem> messageHistory = [];
 
   @override
   void initState() {
@@ -44,7 +58,7 @@ class _ChatScreenState extends State<ChatScreen> {
     fetchUserInfo();
     _speech = stt.SpeechToText();
     _initializeSpeech();
-    _loadChatHistory(); // Load chat history on startup
+    _loadMessageHistory();
   }
 
   void _initializeSpeech() async {
@@ -56,8 +70,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // Load chat history from backend
-  Future<void> _loadChatHistory() async {
+  Future<void> _loadMessageHistory() async {
     try {
       final String? accessToken = await _storage.read(key: 'access_token');
       final response = await http.get(
@@ -68,59 +81,39 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         setState(() {
-          chatHistory.clear();
-          chatHistory.addAll(data.map((session) {
-            return List<Map<String, String>>.from(
-              session['messages'].map((msg) => {
-                'role': msg['role'],
-                'content': msg['content']
-              })
-            );
-          }));
+          messageHistory = data.map((item) => ChatHistoryItem.fromJson(item)).toList();
         });
       }
     } catch (e) {
-      print("Error loading chat history: $e");
+      print("Error loading message history: $e");
     }
   }
 
-  // Save chat session to backend
-  Future<void> _saveChatSession() async {
-  try {
-    final String? accessToken = await _storage.read(key: 'access_token');
-    if (accessToken == null) {
-      print("No access token found");
-      return;
-    }
+  Future<void> _saveMessageHistory(String message, String response) async {
+    try {
+      final String? accessToken = await _storage.read(key: 'access_token');
+      if (accessToken == null) return;
 
-    final response = await http.post(
-      Uri.parse("http://localhost:8000/api/chat/save/"),
-      headers: {
-        "Authorization": "Bearer $accessToken",
-        "Content-Type": "application/json"
-      },
-      body: json.encode({
-        "messages": chatMessages.where((msg) => msg['role'] != 'system').toList()
-      }),
-    );
-
-    print("Save status: ${response.statusCode}");
-    print("Response body: ${response.body}");
-
-    if (response.statusCode == 201) {
-      await _loadChatHistory();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: ${response.body}')),
+      final res = await http.post(
+        Uri.parse("http://localhost:8000/api/chat/history/"),
+        headers: {
+          "Authorization": "Bearer $accessToken",
+          "Content-Type": "application/json"
+        },
+        body: json.encode({
+          'message': message,
+          'response': response,
+        }),
       );
+
+      if (res.statusCode == 201) {
+        await _loadMessageHistory();
+      }
+    } catch (e) {
+      print("Error saving message history: $e");
     }
-  } catch (e) {
-    print("Save error: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: ${e.toString()}')),
-    );
   }
-}
+
   void _startListening() async {
     if (!_isListening) {
       setState(() {
@@ -160,9 +153,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> fetchUserInfo() async {
     try {
+      final String? accessToken = await _storage.read(key: 'access_token');
       final response = await http.get(
         Uri.parse("http://localhost:8000/api/userinfo/"),
-        headers: {"Authorization": "Bearer your_token_here"},
+        headers: {"Authorization": "Bearer $accessToken"},
       );
 
       if (response.statusCode == 200) {
@@ -180,20 +174,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage(String message) {
     if (message.isEmpty) return;
-    
-    // Clear input immediately
     _controller.clear();
     
-    // Add user message and scroll
     setState(() {
       chatMessages.add({"role": "user", "content": message});
       _scrollToBottom();
     });
 
-    // Save chat session
-    _saveChatSession();
-
-    // Send to backend
     _queryToLlama(message);
   }
 
@@ -213,16 +200,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
+        final aiResponse = responseData["message"]["content"];
+        
         setState(() {
-          chatMessages.add({
-            "role": "system",
-            "content": responseData["message"]["content"],
-          });
+          chatMessages.add({"role": "system", "content": aiResponse});
           _scrollToBottom();
         });
 
-        // Save chat session after AI response
-        _saveChatSession();
+        await _saveMessageHistory(prompt, aiResponse);
       } else {
         setState(() => chatMessages.removeLast());
       }
@@ -235,7 +220,7 @@ class _ChatScreenState extends State<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
     });
@@ -249,69 +234,50 @@ class _ChatScreenState extends State<ChatScreen> {
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
       home: Scaffold(
         appBar: AppBar(
-          title: Text("Ai Chat App"),
+          title: const Text("AI Chat App"),
           actions: [
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'New Chat') {
-                  _startNewChat();
-                } else if (value == 'Settings') {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text("Settings"),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text("Font Size:"),
-                          Slider(
-                            value: fontSize,
-                            min: 12,
-                            max: 30,
-                            onChanged: (newSize) {
-                              setState(() => fontSize = newSize);
+            IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: () => showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Chat History"),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    height: 400,
+                    child: messageHistory.isEmpty
+                        ? const Center(child: Text("No chat history available"))
+                        : ListView.builder(
+                            itemCount: messageHistory.length,
+                            itemBuilder: (context, index) {
+                              final item = messageHistory[index];
+                              return ListTile(
+                                title: Text(item.message),
+                                subtitle: Text(item.response),
+                                trailing: Text(item.timestamp),
+                              );
                             },
                           ),
-                          Text("Username:"),
-                          TextField(controller: usernameController..text = username),
-                          Text("Password:"),
-                          TextField(
-                            controller: passwordController,
-                            obscureText: true,
-                          ),
-                          Text("Email:"),
-                          TextField(controller: emailController),
-                          ElevatedButton(
-                            onPressed: _saveUserSettings,
-                            child: Text("Save Settings"),
-                          ),
-                        ],
-                      ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Close"),
                     ),
-                  );
-                } else if (value == 'Toggle Dark Mode' || value == 'Toggle Light Mode') {
-                  _toggleDarkMode();
-                } else if (value == 'View History') {
-                  _toggleHistoryView();
-                } else if (value == 'About') {
-                  showAboutDialog(
-                    context: context,
-                    applicationName: 'Ai Chat Application',
-                    applicationVersion: '1.1.3',
-                    children: [
-                      Text('This is a chat app powered by Llama AI and uses Ollama Model 3.2')
-                    ],
-                  );
-                }
-              },
+                  ],
+                ),
+              ),
+            ),
+            PopupMenuButton<String>(
+              onSelected: (value) => _handlePopupSelection(value),
               itemBuilder: (BuildContext context) => [
                 PopupMenuItem(
                   value: 'New Chat',
                   child: Row(
                     children: [
-                      Icon(Icons.add, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('New Chat'),
+                      Icon(Icons.add, color: buttonColor),
+                      const SizedBox(width: 8),
+                      const Text('New Chat'),
                     ],
                   ),
                 ),
@@ -319,9 +285,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   value: 'Settings',
                   child: Row(
                     children: [
-                      Icon(Icons.settings, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('Settings'),
+                      Icon(Icons.settings, color: buttonColor),
+                      const SizedBox(width: 8),
+                      const Text('Settings'),
                     ],
                   ),
                 ),
@@ -329,19 +295,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   value: isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode',
                   child: Row(
                     children: [
-                      Icon(Icons.dark_mode, color: Colors.blue),
-                      SizedBox(width: 8),
+                      Icon(Icons.dark_mode, color: buttonColor),
+                      const SizedBox(width: 8),
                       Text(isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'View History',
-                  child: Row(
-                    children: [
-                      Icon(Icons.history, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('View History'),
                     ],
                   ),
                 ),
@@ -349,9 +305,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   value: 'About',
                   child: Row(
                     children: [
-                      Icon(Icons.info, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('About'),
+                      Icon(Icons.info, color: buttonColor),
+                      const SizedBox(width: 8),
+                      const Text('About'),
                     ],
                   ),
                 ),
@@ -371,30 +327,28 @@ class _ChatScreenState extends State<ChatScreen> {
                           controller: _scrollController,
                           itemCount: chatMessages.length,
                           itemBuilder: (context, index) {
-                            if (index == 0) return SizedBox.shrink();
-                            final message = chatMessages[index];
-                            return _buildMessageBubble(message);
+                            if (index == 0) return const SizedBox.shrink();
+                            return _buildMessageBubble(chatMessages[index]);
                           },
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       Row(
                         children: [
                           Expanded(
                             child: TextField(
                               controller: _controller,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 labelText: "Enter your prompt",
                                 border: OutlineInputBorder(),
                               ),
                               onSubmitted: _sendMessage,
                             ),
                           ),
-                          SizedBox(width: 8),
-                          if (_controller.text.isEmpty)
-                            _buildMicButton(buttonColor!),
-                          if (_controller.text.isNotEmpty)
-                            _buildSendButton(buttonColor!),
+                          const SizedBox(width: 8),
+                          _controller.text.isEmpty
+                              ? _buildMicButton(buttonColor!)
+                              : _buildSendButton(buttonColor!),
                         ],
                       ),
                     ],
@@ -415,8 +369,8 @@ class _ChatScreenState extends State<ChatScreen> {
     return Align(
       alignment: isSystem ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        margin: EdgeInsets.symmetric(vertical: 8),
-        padding: EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: messageColor,
           borderRadius: BorderRadius.circular(12),
@@ -437,7 +391,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (details.primaryVelocity! < 0) _cancelListening();
       },
       child: Container(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _isMicPressed ? Colors.grey[300]! : buttonColor,
           borderRadius: BorderRadius.circular(8),
@@ -454,12 +408,12 @@ class _ChatScreenState extends State<ChatScreen> {
     return GestureDetector(
       onTap: () => _sendMessage(_controller.text),
       child: Container(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: buttonColor,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(Icons.send, color: Colors.white),
+        child: const Icon(Icons.send, color: Colors.white),
       ),
     );
   }
@@ -468,7 +422,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Column(
       children: [
         Text(
-          'Chat History',
+          'Chat Sessions',
           style: TextStyle(
             fontSize: fontSize,
             fontWeight: FontWeight.bold,
@@ -479,7 +433,7 @@ class _ChatScreenState extends State<ChatScreen> {
             itemCount: chatHistory.length,
             itemBuilder: (context, index) {
               return Card(
-                margin: EdgeInsets.symmetric(vertical: 8),
+                margin: const EdgeInsets.symmetric(vertical: 8),
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
@@ -501,8 +455,65 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         ElevatedButton(
           onPressed: _toggleHistoryView,
-          child: Text('Back to Chat'),
+          child: const Text('Back to Chat'),
         ),
+      ],
+    );
+  }
+
+  void _handlePopupSelection(String value) {
+    if (value == 'New Chat') {
+      _startNewChat();
+    } else if (value == 'Settings') {
+      _showSettingsDialog();
+    } else if (value == 'Toggle Dark Mode' || value == 'Toggle Light Mode') {
+      _toggleDarkMode();
+    } else if (value == 'About') {
+      _showAboutDialog();
+    }
+  }
+
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Settings"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Font Size:"),
+            Slider(
+              value: fontSize,
+              min: 12,
+              max: 30,
+              onChanged: (newSize) => setState(() => fontSize = newSize),
+            ),
+            Text("Username:"),
+            TextField(controller: usernameController..text = username),
+            const Text("Password:"),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+            ),
+            const Text("Email:"),
+            TextField(controller: emailController),
+            ElevatedButton(
+              onPressed: _saveUserSettings,
+              child: const Text("Save Settings"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAboutDialog() {
+    showAboutDialog(
+      context: context,
+      applicationName: 'AI Chat Application',
+      applicationVersion: '1.1.3',
+      children: const [
+        Text('This is a chat app powered by Llama AI and uses Ollama Model 3.2')
       ],
     );
   }
@@ -520,11 +531,6 @@ class _ChatScreenState extends State<ChatScreen> {
   void _toggleHistoryView() => setState(() => showHistory = !showHistory);
   
   void _saveUserSettings() {
-    final updatedData = {
-      'username': usernameController.text,
-      'password': passwordController.text,
-      'email': emailController.text,
-    };
-    // Implement API call to save settings
+    // Implement settings save logic
   }
 }

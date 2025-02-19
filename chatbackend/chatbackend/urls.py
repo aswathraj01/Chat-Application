@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from users.views import RegisterView, UserInfoView
-from chat.views import ChatSessionView
+from chat.views import ChatHistoryView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -10,6 +10,5 @@ urlpatterns = [
     path('api/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/signup/', RegisterView.as_view(), name='signup'),
     path('api/userinfo/', UserInfoView.as_view(), name='user_info'),
-    path('api/chat/history/', ChatSessionView.as_view(), name='chat_history'),
-    path('api/chat/save/', ChatSessionView.as_view(), name='save_chat'),
+    path('api/chat/history/', ChatHistoryView.as_view(), name='chat-history'),
 ]
