@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/chat_screen.dart';
 import 'screens/LoginScreen.dart'; // Import LoginScreen
 import 'screens/SignupScreen.dart'; // Import SignupScreen
-
+import 'screens/user_settings_screen.dart';
 void main() {
   runApp(const MyApp());
 }
@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(), // Login Screen route
         '/signup': (context) => SignupScreen(), // Signup Screen route
         '/chat': (context) => ChatScreen(),  // Chat Screen route
+        '/user-settings': (context) => const UserSettingsScreen(),
       },
     );
   }

@@ -3,6 +3,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'user_settings_screen.dart';
 
 class ChatHistoryItem {
   final String message;
@@ -81,7 +82,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         setState(() {
-          messageHistory = data.map((item) => ChatHistoryItem.fromJson(item)).toList();
+          messageHistory =
+              data.map((item) => ChatHistoryItem.fromJson(item)).toList();
         });
       }
     } catch (e) {
@@ -121,7 +123,8 @@ class _ChatScreenState extends State<ChatScreen> {
         _isMicPressed = true;
       });
       _speech.listen(
-        onResult: (result) => setState(() => _recognizedText = result.recognizedWords),
+        onResult: (result) =>
+            setState(() => _recognizedText = result.recognizedWords),
       );
     }
   }
@@ -175,7 +178,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendMessage(String message) {
     if (message.isEmpty) return;
     _controller.clear();
-    
+
     setState(() {
       chatMessages.add({"role": "user", "content": message});
       _scrollToBottom();
@@ -201,7 +204,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         final aiResponse = responseData["message"]["content"];
-        
+
         setState(() {
           chatMessages.add({"role": "system", "content": aiResponse});
           _scrollToBottom();
@@ -282,12 +285,22 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 PopupMenuItem(
-                  value: 'Settings',
+                  value: 'Font Size',
                   child: Row(
                     children: [
-                      Icon(Icons.settings, color: buttonColor),
+                      Icon(Icons.font_download, color: buttonColor),
                       const SizedBox(width: 8),
-                      const Text('Settings'),
+                      const Text('Font Size'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'User Settings',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, color: buttonColor),
+                      const SizedBox(width: 8),
+                      const Text('User Settings'),
                     ],
                   ),
                 ),
@@ -297,7 +310,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Icon(Icons.dark_mode, color: buttonColor),
                       const SizedBox(width: 8),
-                      Text(isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode'),
+                      Text(isDarkMode
+                          ? 'Toggle Light Mode'
+                          : 'Toggle Dark Mode'),
                     ],
                   ),
                 ),
@@ -311,6 +326,16 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                 ),
+                PopupMenuItem(
+                  value: 'Logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: buttonColor),
+                      const SizedBox(width: 8),
+                      const Text('Logout'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],
@@ -318,7 +343,7 @@ class _ChatScreenState extends State<ChatScreen> {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: showHistory 
+            child: showHistory
                 ? _buildHistoryView()
                 : Column(
                     children: [
@@ -337,13 +362,13 @@ class _ChatScreenState extends State<ChatScreen> {
                         children: [
                           Expanded(
                             child: TextField(
-                              controller: _controller,
-                              decoration: const InputDecoration(
-                                labelText: "Enter your prompt",
-                                border: OutlineInputBorder(),
-                              ),
-                              onSubmitted: _sendMessage,
-                            ),
+                                controller: _controller,
+                                decoration: const InputDecoration(
+                                  labelText: "Enter your prompt",
+                                  border: OutlineInputBorder(),
+                                ),
+                                onSubmitted: _sendMessage,
+                                onChanged: (_) => setState(() {})),
                           ),
                           const SizedBox(width: 8),
                           _controller.text.isEmpty
@@ -464,46 +489,69 @@ class _ChatScreenState extends State<ChatScreen> {
   void _handlePopupSelection(String value) {
     if (value == 'New Chat') {
       _startNewChat();
-    } else if (value == 'Settings') {
-      _showSettingsDialog();
+    } else if (value == 'Font Size') {
+      _showSettingsFontDialog();
     } else if (value == 'Toggle Dark Mode' || value == 'Toggle Light Mode') {
       _toggleDarkMode();
     } else if (value == 'About') {
       _showAboutDialog();
+    } else if (value == 'Logout') {
+      _logoutUser();
+    } else if (value == 'User Settings') {
+      _userSettings();
     }
   }
 
-  void _showSettingsDialog() {
+  void _logoutUser() async {
+    await _storage.delete(key: 'access_token');
+    Navigator.pushReplacementNamed(
+        // ignore: use_build_context_synchronously
+        context,
+        '/login');
+  }
+
+  void _userSettings() {
+    Navigator.pushNamed(context, '/user-settings');
+  }
+
+  void _showSettingsFontDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Settings"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Font Size:"),
-            Slider(
-              value: fontSize,
-              min: 12,
-              max: 30,
-              onChanged: (newSize) => setState(() => fontSize = newSize),
-            ),
-            Text("Username:"),
-            TextField(controller: usernameController..text = username),
-            const Text("Password:"),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-            ),
-            const Text("Email:"),
-            TextField(controller: emailController),
-            ElevatedButton(
-              onPressed: _saveUserSettings,
-              child: const Text("Save Settings"),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text("Font Size"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                      "Current Size: ${fontSize.toInt()}"), // Show current value
+                  Slider(
+                    value: fontSize,
+                    min: 12,
+                    max: 30,
+                    divisions: 18, // Creates discrete intervals
+                    label: fontSize.toInt().toString(), // Show value on drag
+                    onChanged: (newSize) {
+                      // Update both dialog state and parent state
+                      setState(() => fontSize = newSize); // Update main UI
+                      setStateDialog(
+                          () => fontSize = newSize); // Update dialog UI
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Close"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -529,7 +577,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _toggleDarkMode() => setState(() => isDarkMode = !isDarkMode);
   void _toggleHistoryView() => setState(() => showHistory = !showHistory);
-  
+
   void _saveUserSettings() {
     // Implement settings save logic
   }
