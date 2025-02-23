@@ -4,3 +4,4 @@ A chat application that is build for mobile device as well as for windows which 
 flutter pub get
 flutter clean
 flutter run
+. 
