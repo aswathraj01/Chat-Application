@@ -4,7 +4,8 @@ from django.db import models
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=30, unique=True)
-    
+    is_admin = models.BooleanField(default=False)  # Add this field
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 

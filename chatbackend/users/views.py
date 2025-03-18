@@ -17,6 +17,7 @@ class RegisterView(generics.CreateAPIView):
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'is_admin': user.is_admin,
         }, status=status.HTTP_201_CREATED)
 
 class UserInfoView(generics.RetrieveAPIView):

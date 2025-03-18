@@ -11,4 +11,5 @@ urlpatterns = [
     path('api/signup/', RegisterView.as_view(), name='signup'),
     path('api/userinfo/', UserInfoView.as_view(), name='user_info'),
     path('api/chat/history/', ChatHistoryView.as_view(), name='chat-history'),
+        path('web/', include('web_interface.urls')),
 ]
