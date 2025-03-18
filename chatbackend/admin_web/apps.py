@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class WebInterfaceConfig(AppConfig):
+class AdminWebConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'web_interface'
+    name = 'admin_web'

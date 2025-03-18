@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, unused_import, unused_element
+
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
