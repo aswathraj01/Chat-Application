@@ -3,7 +3,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'user_settings_screen.dart';
+import 'package:clipboard/clipboard.dart'; // For message copying
+import 'package:flutter/services.dart'; // For Clipboard and ClipboardData
 
 class ChatHistoryItem {
   final String message;
@@ -34,7 +35,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  List<Map<String, String>> chatMessages = [
+  List<Map<String, dynamic>> chatMessages = [
     {"role": "system", "content": "You are a helpful assistant."},
   ];
   bool isDarkMode = false;
@@ -52,6 +53,9 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final _storage = const FlutterSecureStorage();
   List<ChatHistoryItem> messageHistory = [];
+  bool isTyping = false; // Typing indicator
+  List<String> pinnedMessages = []; // Pinned messages
+  Map<int, List<String>> messageReactions = {}; // Message reactions
 
   @override
   void initState() {
@@ -188,6 +192,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _queryToLlama(String prompt) async {
+    setState(() {
+      isTyping = true; // Show typing indicator
+    });
+
     final data = {
       "model": "llama3.2",
       "messages": chatMessages,
@@ -216,6 +224,10 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       setState(() => chatMessages.removeLast());
+    } finally {
+      setState(() {
+        isTyping = false; // Hide typing indicator
+      });
     }
   }
 
@@ -227,6 +239,63 @@ class _ChatScreenState extends State<ChatScreen> {
         curve: Curves.easeOut,
       );
     });
+  }
+
+  // Feature: Add reaction to a message
+  void _addReaction(int messageIndex, String reaction) {
+    setState(() {
+      if (messageReactions[messageIndex] == null) {
+        messageReactions[messageIndex] = [];
+      }
+      messageReactions[messageIndex]!.add(reaction);
+    });
+  }
+
+  // Feature: Edit a message
+  void _updateMessage(int messageIndex, String newContent) {
+    setState(() {
+      chatMessages[messageIndex]['content'] = newContent;
+    });
+  }
+
+  // Feature: Pin a message
+  void _togglePinMessage(int messageIndex) {
+    setState(() {
+      if (pinnedMessages.contains(chatMessages[messageIndex]['content'])) {
+        pinnedMessages.remove(chatMessages[messageIndex]['content']);
+      } else {
+        pinnedMessages.add(chatMessages[messageIndex]['content']);
+      }
+    });
+  }
+
+  // Feature: Copy a message to clipboard
+  void _copyMessage(String message) {
+    Clipboard.setData(ClipboardData(text: message)).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message copied to clipboard')),
+      );
+    });
+  }
+
+  // Feature: Translate a message
+  void _translateMessage(int messageIndex) async {
+    final message = chatMessages[messageIndex]['content'];
+    final response = await http.post(
+      Uri.parse("https://translation-api.com/translate"),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({
+        'text': message,
+        'target_language': 'es', // Translate to Spanish
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final translatedText = json.decode(response.body)['translated_text'];
+      setState(() {
+        chatMessages[messageIndex]['translated'] = translatedText;
+      });
+    }
   }
 
   @override
@@ -347,16 +416,45 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? _buildHistoryView()
                 : Column(
                     children: [
+                      if (pinnedMessages.isNotEmpty)
+                        Column(
+                          children: [
+                            const Text(
+                              'Pinned Messages',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            ...pinnedMessages.map((message) {
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.yellow[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(message),
+                              );
+                            }).toList(),
+                          ],
+                        ),
                       Expanded(
                         child: ListView.builder(
                           controller: _scrollController,
                           itemCount: chatMessages.length,
                           itemBuilder: (context, index) {
                             if (index == 0) return const SizedBox.shrink();
-                            return _buildMessageBubble(chatMessages[index]);
+                            return _buildMessageBubble(
+                                chatMessages[index], index);
                           },
                         ),
                       ),
+                      if (isTyping)
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text('AI is typing...'),
+                        ),
                       const SizedBox(height: 20),
                       Row(
                         children: [
@@ -384,62 +482,290 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(Map<String, String> message) {
+  Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
     final isSystem = message["role"] == 'system';
     final messageColor = isSystem
         ? (isDarkMode ? Colors.grey[900]! : Colors.grey[200]!)
         : (isDarkMode ? Colors.deepPurple[800]! : Colors.blue[300]!);
     final textColor = isDarkMode ? Colors.white : Colors.black;
 
-    return Align(
-      alignment: isSystem ? Alignment.centerLeft : Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: messageColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          message["content"]!,
-          style: TextStyle(color: textColor, fontSize: fontSize),
+    return GestureDetector(
+      onLongPress: () {
+        if (!isSystem) {
+          _showMessageOptions(context, index);
+        }
+      },
+      child: Align(
+        alignment: isSystem ? Alignment.centerLeft : Alignment.centerRight,
+        child: Row(
+          mainAxisSize:
+              MainAxisSize.min, // Ensure the row doesn't expand unnecessarily
+          crossAxisAlignment:
+              CrossAxisAlignment.end, // Align items at the bottom
+          children: [
+            if (isSystem) // Copy and Delete icons for received (system) messages
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.copy,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _copyMessage(message["content"]),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _deleteMessage(index),
+                  ),
+                ],
+              ),
+            if (!isSystem) // Edit and Delete icons for sent (user) messages
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.edit,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _editMessage(index),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _deleteMessage(index),
+                  ),
+                ],
+              ),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: messageColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message["content"]!,
+                    style: TextStyle(color: textColor, fontSize: fontSize),
+                  ),
+                  if (message['translated'] != null)
+                    Text(
+                      message['translated'],
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.7),
+                        fontSize: fontSize * 0.8,
+                      ),
+                    ),
+                  if (messageReactions[index] != null)
+                    Wrap(
+                      children: messageReactions[index]!.map((reaction) {
+                        return Text(reaction);
+                      }).toList(),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMicButton(Color buttonColor) {
-    return GestureDetector(
-      onLongPressStart: (_) => _startListening(),
-      onLongPressEnd: (_) => _stopListening(),
-      onHorizontalDragEnd: (details) {
-        if (details.primaryVelocity! < 0) _cancelListening();
+  void _editMessage(int messageIndex) async {
+    final message = chatMessages[messageIndex]['content'];
+
+    // Show a dialog to edit the message
+    TextEditingController editController = TextEditingController(text: message);
+    final newMessage = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Message'),
+          content: TextField(
+            controller: editController,
+            decoration: const InputDecoration(
+              labelText: 'Edit your message',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, editController.text);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
       },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: _isMicPressed ? Colors.grey[300]! : buttonColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          Icons.mic,
-          color: _isMicPressed ? Colors.grey[600]! : Colors.white,
-        ),
-      ),
+    );
+
+    if (newMessage != null && newMessage.isNotEmpty) {
+      // Update the message in the chat
+      setState(() {
+        chatMessages[messageIndex]['content'] = newMessage;
+      });
+
+      // Remove the old AI response (if any)
+      if (messageIndex + 1 < chatMessages.length &&
+          chatMessages[messageIndex + 1]['role'] == 'system') {
+        setState(() {
+          chatMessages.removeAt(messageIndex + 1);
+        });
+      }
+
+      // Re-send the edited message to the AI
+      _queryToLlama(newMessage);
+    }
+  }
+
+  void _showMessageOptions(BuildContext context, int messageIndex) {
+    final isSystem = chatMessages[messageIndex]['role'] == 'system';
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!isSystem) // Edit option for sent messages
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Edit'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editMessage(messageIndex);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text('Delete'),
+              onTap: () {
+                _deleteMessage(messageIndex);
+                Navigator.pop(context);
+              },
+            ),
+            if (isSystem) // Copy option for received messages
+              ListTile(
+                leading: const Icon(Icons.copy),
+                title: const Text('Copy'),
+                onTap: () {
+                  _copyMessage(chatMessages[messageIndex]['content']);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+// Keep this single instance of _deleteMessage
+void _deleteMessage(int messageIndex) {
+  setState(() {
+    // Remove the message at the specified index
+    chatMessages.removeAt(messageIndex);
+
+    // If the deleted message is a user message, also remove the AI response (if any)
+    if (messageIndex < chatMessages.length &&
+        chatMessages[messageIndex]['role'] == 'system') {
+      chatMessages.removeAt(messageIndex);
+    }
+  });
+}
+
+  void _showReactionPicker(BuildContext context, int messageIndex) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Wrap(
+          children: [
+            ListTile(
+              title: const Text('👍'),
+              onTap: () {
+                _addReaction(messageIndex, '👍');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('❤️'),
+              onTap: () {
+                _addReaction(messageIndex, '❤️');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('😂'),
+              onTap: () {
+                _addReaction(messageIndex, '😂');
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditDialog(BuildContext context, int messageIndex) {
+    TextEditingController editController = TextEditingController(
+      text: chatMessages[messageIndex]['content'],
+    );
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Message'),
+          content: TextField(
+            controller: editController,
+            decoration: const InputDecoration(
+              labelText: 'Edit your message',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _updateMessage(messageIndex, editController.text);
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildSendButton(Color buttonColor) {
-    return GestureDetector(
-      onTap: () => _sendMessage(_controller.text),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: buttonColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(Icons.send, color: Colors.white),
-      ),
+    return IconButton(
+      icon: Icon(Icons.send, color: buttonColor),
+      onPressed: () => _sendMessage(_controller.text),
+    );
+  }
+
+  Widget _buildMicButton(Color buttonColor) {
+    return IconButton(
+      icon:
+          Icon(_isMicPressed ? Icons.mic : Icons.mic_none, color: buttonColor),
+      onPressed: _isMicPressed ? _stopListening : _startListening,
     );
   }
 
