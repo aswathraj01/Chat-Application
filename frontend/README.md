@@ -93,15 +93,3 @@ my_project/
 └── README.md # Project description and setup instructions
 
 
-
-Message Editing X
-
-Message Deletion X
-
-Typing Indicator X
-
-
-
-Message Copying X
-
-Message Translation X

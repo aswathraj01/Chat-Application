@@ -39,7 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Map<String, dynamic>> chatMessages = [
     {"role": "system", "content": "You are a helpful assistant."},
   ];
-  bool isDarkMode = false;
+  bool isDarkMode = true; // Set default theme to dark mode
   bool showHistory = false;
   final List<List<Map<String, String>>> chatHistory = [];
   double fontSize = 16;
@@ -58,6 +58,7 @@ class _ChatScreenState extends State<ChatScreen> {
   List<String> pinnedMessages = []; // Pinned messages
   Map<int, List<String>> messageReactions = {}; // Message reactions
   final FlutterTts _flutterTts = FlutterTts(); // Add this line
+  bool _isEmojiPickerVisible = false; // Add this line
 
   @override
   void initState() {
@@ -408,7 +409,7 @@ class _ChatScreenState extends State<ChatScreen> {
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
       home: Scaffold(
         appBar: AppBar(
-          title: const Text("AI Chat App"),
+          title: const Text("Lumin"),
           actions: [
             IconButton(
               icon: const Icon(Icons.history),
@@ -581,35 +582,6 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment:
               CrossAxisAlignment.end, // Align items at the bottom
           children: [
-            if (isSystem) // Copy and Delete icons for received (system) messages
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.copy,
-                      size: 16,
-                      color: textColor.withOpacity(0.7),
-                    ),
-                    onPressed: () => _copyMessage(message["content"]),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.volume_up,
-                      size: 16,
-                      color: textColor.withOpacity(0.7),
-                    ),
-                    onPressed: () => _speakMessage(message["content"]),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete,
-                      size: 16,
-                      color: textColor.withOpacity(0.7),
-                    ),
-                    onPressed: () => _deleteMessage(index),
-                  ),
-                ],
-              ),
             if (!isSystem) // Edit and Delete icons for sent (user) messages
               Row(
                 children: [
@@ -664,6 +636,35 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
             ),
+            if (isSystem) // Copy and Delete icons for received (system) messages
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.copy,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _copyMessage(message["content"]),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.volume_up,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _speakMessage(message["content"]),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _deleteMessage(index),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -774,39 +775,6 @@ class _ChatScreenState extends State<ChatScreen> {
         chatMessages.removeAt(messageIndex);
       }
     });
-  }
-
-  void _showReactionPicker(BuildContext context, int messageIndex) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Wrap(
-          children: [
-            ListTile(
-              title: const Text('👍'),
-              onTap: () {
-                _addReaction(messageIndex, '👍');
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('❤️'),
-              onTap: () {
-                _addReaction(messageIndex, '❤️');
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('😂'),
-              onTap: () {
-                _addReaction(messageIndex, '😂');
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showEditDialog(BuildContext context, int messageIndex) {
@@ -982,10 +950,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _startNewChat() {
     setState(() {
-      chatHistory.add(List.from(chatMessages));
       chatMessages = [
         {"role": "system", "content": "You are a helpful assistant."}
       ];
+      showHistory = false;
     });
   }
 
