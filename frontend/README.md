@@ -92,7 +92,7 @@ my_project/
 ├── .gitignore # Git ignore file for Flutter
 └── README.md # Project description and setup instructions
 
-Message Reactions
+
 
 Message Editing X
 
@@ -100,8 +100,8 @@ Message Deletion X
 
 Typing Indicator X
 
-Message Pinning
+
 
 Message Copying X
 
-Message Translation
+Message Translation X

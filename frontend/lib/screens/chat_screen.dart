@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:clipboard/clipboard.dart'; // For message copying
 import 'package:flutter/services.dart'; // For Clipboard and ClipboardData
+import 'package:flutter_tts/flutter_tts.dart'; // Add this import
 
 class ChatHistoryItem {
   final String message;
@@ -56,6 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool isTyping = false; // Typing indicator
   List<String> pinnedMessages = []; // Pinned messages
   Map<int, List<String>> messageReactions = {}; // Message reactions
+  final FlutterTts _flutterTts = FlutterTts(); // Add this line
 
   @override
   void initState() {
@@ -349,6 +351,55 @@ class _ChatScreenState extends State<ChatScreen> {
     _sendMessage(message);
   }
 
+  void _showChatHistory() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Chat History',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: messageHistory.length,
+                itemBuilder: (context, index) {
+                  final item = messageHistory[index];
+                  return ListTile(
+                    title: Text(item.message),
+                    subtitle: Text(item.response),
+                    trailing: Text(item.timestamp),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _loadChatSession(index);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _loadChatSession(int index) {
+    setState(() {
+      chatMessages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": messageHistory[index].message},
+        {"role": "system", "content": messageHistory[index].response},
+      ];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final buttonColor = isDarkMode ? Colors.deepPurple[800] : Colors.blue;
@@ -361,35 +412,7 @@ class _ChatScreenState extends State<ChatScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.history),
-              onPressed: () => showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text("Chat History"),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    height: 400,
-                    child: messageHistory.isEmpty
-                        ? const Center(child: Text("No chat history available"))
-                        : ListView.builder(
-                            itemCount: messageHistory.length,
-                            itemBuilder: (context, index) {
-                              final item = messageHistory[index];
-                              return ListTile(
-                                title: Text(item.message),
-                                subtitle: Text(item.response),
-                                trailing: Text(item.timestamp),
-                              );
-                            },
-                          ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Close"),
-                    ),
-                  ],
-                ),
-              ),
+              onPressed: _showChatHistory,
             ),
             IconButton(
               icon: const Icon(Icons.language),
@@ -568,6 +591,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: textColor.withOpacity(0.7),
                     ),
                     onPressed: () => _copyMessage(message["content"]),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.volume_up,
+                      size: 16,
+                      color: textColor.withOpacity(0.7),
+                    ),
+                    onPressed: () => _speakMessage(message["content"]),
                   ),
                   IconButton(
                     icon: Icon(
@@ -962,5 +993,32 @@ class _ChatScreenState extends State<ChatScreen> {
   void _toggleHistoryView() => setState(() => showHistory = !showHistory);
   void _saveUserSettings() {
     // Implement settings save logic
+  }
+
+  void _speakMessage(String message) async {
+    await _flutterTts.setLanguage("en-US"); // Set language to US English
+
+    // Set a higher pitch for a more female-like voice
+    await _flutterTts.setPitch(
+        2.6); // Adjust pitch (1.0 is default, higher values make it more female-like)
+
+    // Set a slightly slower speech rate for more natural speech
+    await _flutterTts.setSpeechRate(
+        0.9); // Adjust speech rate (1.0 is default, lower values make it slower)
+
+    // Optionally, set a specific voice if available
+    // Check available voices using _flutterTts.getVoices() and select a female voice
+    // Example:
+    // var voices = await _flutterTts.getVoices();
+    // var femaleVoice = voices.firstWhere((voice) => voice.name.contains("female"));
+    // await _flutterTts.setVoice(femaleVoice);
+
+    await _flutterTts.speak(message);
+  }
+
+  @override
+  void dispose() {
+    _flutterTts.stop(); // Stop any ongoing speech
+    super.dispose();
   }
 }
