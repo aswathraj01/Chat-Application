@@ -1,7 +1,50 @@
 # Chat-Application
-A chat application that is build for mobile device as well as for windows which which is based on flutter, django and Llama
 
-flutter pub get
-flutter clean
-flutter run
-. 
+A chat application built for mobile devices as well as for Windows, based on Flutter, Django, and Llama. This application supports various features such as message translation, editing, deleting, and reactions.
+
+![Chat Application](https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif)
+
+## Features
+
+- Real-time messaging
+- Message translation to multiple languages
+- Edit and delete messages
+- Add reactions to messages
+- Speech-to-text functionality
+- Dark mode support
+
+## Technologies Used
+
+- **Frontend:** Flutter
+- **Backend:** Django
+- **AI Integration:** Llama
+
+## Installation
+
+### Prerequisites
+
+- Flutter SDK: [Install Flutter](https://flutter.dev/docs/get-started/install)
+- Dart SDK: Included with Flutter
+- Python: [Install Python](https://www.python.org/downloads/)
+- Django: `pip install django`
+- Llama: Follow the installation instructions for Llama
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/Chat-Application.git
+   cd Chat-Application
+   ```
+2. Install dependencies:
+   ```bash
+   flutter pub get
+   ```
+3. Clean the project:
+   ```bash
+   flutter clean
+   ```
+4. Run the application:
+   ```bash
+   flutter run
+   ```

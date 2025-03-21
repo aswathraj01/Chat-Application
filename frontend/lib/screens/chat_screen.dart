@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print, unused_import, unused_element
-
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'dart:convert';
@@ -300,6 +298,57 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _showLanguageSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Language'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('English'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _sendLanguageSelectionMessage('en');
+                  },
+                ),
+                ListTile(
+                  title: const Text('Hindi'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _sendLanguageSelectionMessage('hindi');
+                  },
+                ),
+                ListTile(
+                  title: const Text('Malayalam'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _sendLanguageSelectionMessage('malayalam');
+                  },
+                ),
+                ListTile(
+                  title: const Text('Japanese'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _sendLanguageSelectionMessage('ja');
+                  },
+                ),
+                // Add more languages as needed
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _sendLanguageSelectionMessage(String languageCode) {
+    final message = "Translate all responses to '$languageCode'";
+    _sendMessage(message);
+  }
+
   @override
   Widget build(BuildContext context) {
     final buttonColor = isDarkMode ? Colors.deepPurple[800] : Colors.blue;
@@ -341,6 +390,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.language),
+              onPressed: _showLanguageSelectionDialog,
             ),
             PopupMenuButton<String>(
               onSelected: (value) => _handlePopupSelection(value),
@@ -547,35 +600,37 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ],
               ),
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: messageColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message["content"]!,
-                    style: TextStyle(color: textColor, fontSize: fontSize),
-                  ),
-                  if (message['translated'] != null)
+            Flexible(
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: messageColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      message['translated'],
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.7),
-                        fontSize: fontSize * 0.8,
+                      message["content"]!,
+                      style: TextStyle(color: textColor, fontSize: fontSize),
+                    ),
+                    if (message['translated'] != null)
+                      Text(
+                        message['translated'],
+                        style: TextStyle(
+                          color: textColor.withOpacity(0.7),
+                          fontSize: fontSize * 0.8,
+                        ),
                       ),
-                    ),
-                  if (messageReactions[index] != null)
-                    Wrap(
-                      children: messageReactions[index]!.map((reaction) {
-                        return Text(reaction);
-                      }).toList(),
-                    ),
-                ],
+                    if (messageReactions[index] != null)
+                      Wrap(
+                        children: messageReactions[index]!.map((reaction) {
+                          return Text(reaction);
+                        }).toList(),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -677,18 +732,18 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
 // Keep this single instance of _deleteMessage
-void _deleteMessage(int messageIndex) {
-  setState(() {
-    // Remove the message at the specified index
-    chatMessages.removeAt(messageIndex);
-
-    // If the deleted message is a user message, also remove the AI response (if any)
-    if (messageIndex < chatMessages.length &&
-        chatMessages[messageIndex]['role'] == 'system') {
+  void _deleteMessage(int messageIndex) {
+    setState(() {
+      // Remove the message at the specified index
       chatMessages.removeAt(messageIndex);
-    }
-  });
-}
+
+      // If the deleted message is a user message, also remove the AI response (if any)
+      if (messageIndex < chatMessages.length &&
+          chatMessages[messageIndex]['role'] == 'system') {
+        chatMessages.removeAt(messageIndex);
+      }
+    });
+  }
 
   void _showReactionPicker(BuildContext context, int messageIndex) {
     showModalBottomSheet(
@@ -905,7 +960,6 @@ void _deleteMessage(int messageIndex) {
 
   void _toggleDarkMode() => setState(() => isDarkMode = !isDarkMode);
   void _toggleHistoryView() => setState(() => showHistory = !showHistory);
-
   void _saveUserSettings() {
     // Implement settings save logic
   }
