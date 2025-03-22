@@ -1,0 +1,29 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+}
+
+.dashboard {
+    text-align: center;
+    padding: 50px;
+}
+
+.dashboard h1 {
+    font-size: 2em;
+    margin-bottom: 20px;
+}
+
+.dashboard a {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #4EB5E6;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.dashboard a:hover {
+    background-color: #45a4d6;
+}

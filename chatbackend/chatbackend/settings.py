@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'users',
     'chat',
     'web_interface',
+    'admin_web',
 ]
 
 MIDDLEWARE = [

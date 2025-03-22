@@ -3,6 +3,7 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from users.views import RegisterView, UserInfoView
 from chat.views import ChatHistoryView
+from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
@@ -13,4 +14,6 @@ urlpatterns = [
     path('api/userinfo/', UserInfoView.as_view(), name='user_info'),
     path('api/chat/history/', ChatHistoryView.as_view(), name='chat-history'),
     path('web/', include('web_interface.urls')),
+    path('admin/', admin.site.urls),
+    path('admin_web/', include('admin_web.urls')),
 ]
