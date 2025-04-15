@@ -58,7 +58,7 @@ class _ChatScreenState extends State<ChatScreen> {
   List<String> pinnedMessages = []; // Pinned messages
   Map<int, List<String>> messageReactions = {}; // Message reactions
   final FlutterTts _flutterTts = FlutterTts(); // Add this line
-  bool _isEmojiPickerVisible = false; // Add this line
+  final bool _isEmojiPickerVisible = false; // Add this line
 
   @override
   void initState() {
@@ -200,14 +200,14 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     final data = {
-      "model": "llama3.2",
+      "model": "lumin",
       "messages": chatMessages,
       "stream": false,
     };
 
     try {
       final response = await http.post(
-        Uri.parse("http://localhost:11434/api/chat"),
+        Uri.parse("http://10.0.2.2:11434/api/chat"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(data),
       );
@@ -515,7 +515,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                                 child: Text(message),
                               );
-                            }).toList(),
+                            }),
                           ],
                         ),
                       Expanded(
