@@ -16,4 +16,5 @@ urlpatterns = [
     path('web/', include('web_interface.urls')),
     path('admin/', admin.site.urls),
     path('admin_web/', include('admin_web.urls')),
+    
 ]
