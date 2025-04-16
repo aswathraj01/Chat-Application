@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'signup_screen.dart'; // Import your signup screen
 import 'chat_screen.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,28 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _storage = const FlutterSecureStorage();
-
   bool _isLoading = false;
-  bool _rememberMe = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _attemptAutoLogin();
-  }
-
-  Future<void> _attemptAutoLogin() async {
-    String? accessToken = await _storage.read(key: 'access_token');
-
-    if (accessToken != null) {
-      // Auto login
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const ChatScreen()),
-      );
-    }
-  }
 
   Future<void> _login() async {
     setState(() {
@@ -54,25 +35,28 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response.statusCode == 200) {
+        // Parse tokens from response
         final Map<String, dynamic> responseData = json.decode(response.body);
         final String accessToken = responseData['access'];
         final String refreshToken = responseData['refresh'];
 
-        if (_rememberMe) {
-          await _storage.write(key: 'access_token', value: accessToken);
-          await _storage.write(key: 'refresh_token', value: refreshToken);
-        }
+        // Save tokens securely
+        await _storage.write(key: 'access_token', value: accessToken);
+        await _storage.write(key: 'refresh_token', value: refreshToken);
 
+        // Navigate to chat screen
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const ChatScreen()),
         );
       } else {
+        // Handle login error
         if (!mounted) return;
         _showErrorDialog('Login Failed', 'Invalid email or password');
       }
     } catch (e) {
+      // Handle network errors
       if (!mounted) return;
       _showErrorDialog('Error', 'Failed to connect to the server');
     } finally {
@@ -119,19 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _passwordController,
               decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
-            ),
-            Row(
-              children: [
-                Checkbox(
-                  value: _rememberMe,
-                  onChanged: (value) {
-                    setState(() {
-                      _rememberMe = value ?? false;
-                    });
-                  },
-                ),
-                const Text('Remember Me'),
-              ],
             ),
             const SizedBox(height: 20),
             _isLoading
