@@ -9,6 +9,7 @@ class CustomUser(AbstractUser):
     dob = models.DateField(null=True, blank=True)
     region = models.CharField(max_length=100, null=True, blank=True)
     is_admin = models.BooleanField(default=False)
+    login_count = models.PositiveIntegerField(default=0)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name', 'dob', 'region']

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'signup_screen.dart'; // Import your signup screen
 import 'chat_screen.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,34 +27,32 @@ class _LoginScreenState extends State<LoginScreen> {
         Uri.parse("http://10.0.2.2:8000/api/login/"),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'email': _emailController.text,
+          'email': _emailController.text.trim(),
           'password': _passwordController.text,
         }),
       );
 
       if (response.statusCode == 200) {
-        // Parse tokens from response
         final Map<String, dynamic> responseData = json.decode(response.body);
+
         final String accessToken = responseData['access'];
         final String refreshToken = responseData['refresh'];
+        final bool isAdmin = responseData['is_admin'] ?? false;
 
-        // Save tokens securely
         await _storage.write(key: 'access_token', value: accessToken);
         await _storage.write(key: 'refresh_token', value: refreshToken);
+        await _storage.write(key: 'is_admin', value: isAdmin.toString());
 
-        // Navigate to chat screen
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const ChatScreen()),
         );
       } else {
-        // Handle login error
         if (!mounted) return;
         _showErrorDialog('Login Failed', 'Invalid email or password');
       }
     } catch (e) {
-      // Handle network errors
       if (!mounted) return;
       _showErrorDialog('Error', 'Failed to connect to the server');
     } finally {

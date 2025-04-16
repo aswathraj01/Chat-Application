@@ -1,15 +1,16 @@
 from rest_framework import serializers
 from .models import CustomUser
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ('id', 'email', 'username', 'is_admin')  # Add 'is_admin'
+        fields = ('id', 'email', 'username', 'is_admin', 'login_count')  # Added login_count
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    
+
     class Meta:
         model = CustomUser
         fields = ('email', 'username', 'password', 'first_name', 'last_name', 'dob', 'region')
@@ -25,3 +26,21 @@ class RegisterSerializer(serializers.ModelSerializer):
             region=validated_data.get('region')
         )
         return user
+
+# Custom JWT login serializer to increment login count
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        # Increment login count
+        user = self.user
+        user.login_count += 1
+        user.save()
+
+        # Include extra user info in the response
+        data['email'] = user.email
+        data['username'] = user.username
+        data['is_admin'] = user.is_admin
+        data['login_count'] = user.login_count
+
+        return data
