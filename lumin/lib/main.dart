@@ -4,6 +4,7 @@ import 'screen/login_screen.dart';
 import 'screen/signup_screen.dart';
 import 'screen/chat_screen.dart';
 import 'screen/user_settings_screen.dart';
+import 'screen/support_screen.dart'; // Import the SupportScreen
 
 void main() {
   runApp(const MyAppWrapper());
@@ -62,6 +63,7 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => SignupScreen(),
         '/chat': (context) => ChatScreen(),
         '/user-settings': (context) => UserSettingsScreen(),
+        '/support': (context) => SupportScreen(), // Add the route for SupportScreen
       },
     );
   }

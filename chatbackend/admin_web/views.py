@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
+from django.shortcuts import render
 
 def admin_login(request):
     if request.method == 'POST':
@@ -22,3 +24,8 @@ def dashboard(request):
 def admin_logout(request):
     logout(request)
     return redirect('admin_login')
+
+def admin_dashboard(request):
+    CustomUser = get_user_model()
+    total_users = CustomUser.objects.count()
+    return render(request, 'admin/dashboard.html', {'total_users': total_users})

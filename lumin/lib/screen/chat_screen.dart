@@ -7,6 +7,7 @@ import 'package:clipboard/clipboard.dart'; // For message copying
 import 'package:flutter/services.dart'; // For Clipboard and ClipboardData
 import 'package:flutter_tts/flutter_tts.dart'; // Add this import
 import 'user_settings_screen.dart';
+import 'support_screen.dart';
 
 class ChatHistoryItem {
   final String message;
@@ -108,12 +109,9 @@ class _ChatScreenState extends State<ChatScreen> {
         Uri.parse("http://10.0.2.2:8000/api/chat/history/"),
         headers: {
           "Authorization": "Bearer $accessToken",
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: json.encode({
-          'message': message,
-          'response': response,
-        }),
+        body: json.encode({'message': message, 'response': response}),
       );
 
       if (res.statusCode == 201) {
@@ -131,8 +129,9 @@ class _ChatScreenState extends State<ChatScreen> {
         _isMicPressed = true;
       });
       _speech.listen(
-        onResult: (result) =>
-            setState(() => _recognizedText = result.recognizedWords),
+        onResult:
+            (result) =>
+                setState(() => _recognizedText = result.recognizedWords),
       );
     }
   }
@@ -363,10 +362,7 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: EdgeInsets.all(16.0),
               child: Text(
                 'Chat History',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
             Expanded(
@@ -422,140 +418,160 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             PopupMenuButton<String>(
               onSelected: (value) => _handlePopupSelection(value),
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'New Chat',
-                  child: Row(
-                    children: [
-                      Icon(Icons.add, color: buttonColor),
-                      const SizedBox(width: 8),
-                      const Text('New Chat'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'Font Size',
-                  child: Row(
-                    children: [
-                      Icon(Icons.font_download, color: buttonColor),
-                      const SizedBox(width: 8),
-                      const Text('Font Size'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'User Settings',
-                  child: Row(
-                    children: [
-                      Icon(Icons.person, color: buttonColor),
-                      const SizedBox(width: 8),
-                      const Text('User Settings'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode',
-                  child: Row(
-                    children: [
-                      Icon(Icons.dark_mode, color: buttonColor),
-                      const SizedBox(width: 8),
-                      Text(isDarkMode
-                          ? 'Toggle Light Mode'
-                          : 'Toggle Dark Mode'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'About',
-                  child: Row(
-                    children: [
-                      Icon(Icons.info, color: buttonColor),
-                      const SizedBox(width: 8),
-                      const Text('About'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'Logout',
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: buttonColor),
-                      const SizedBox(width: 8),
-                      const Text('Logout'),
-                    ],
-                  ),
-                ),
-              ],
+              itemBuilder:
+                  (BuildContext context) => [
+                    PopupMenuItem(
+                      value: 'New Chat',
+                      child: Row(
+                        children: [
+                          Icon(Icons.add, color: buttonColor),
+                          const SizedBox(width: 8),
+                          const Text('New Chat'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'Font Size',
+                      child: Row(
+                        children: [
+                          Icon(Icons.font_download, color: buttonColor),
+                          const SizedBox(width: 8),
+                          const Text('Font Size'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'User Settings',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person, color: buttonColor),
+                          const SizedBox(width: 8),
+                          const Text('User Settings'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value:
+                          isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode',
+                      child: Row(
+                        children: [
+                          Icon(Icons.dark_mode, color: buttonColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            isDarkMode
+                                ? 'Toggle Light Mode'
+                                : 'Toggle Dark Mode',
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'Support',
+                      child: Row(
+                        children: [
+                          Icon(Icons.help_outline, color: buttonColor),
+                          const SizedBox(width: 8),
+                          const Text('Support'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'About',
+                      child: Row(
+                        children: [
+                          Icon(Icons.info, color: buttonColor),
+                          const SizedBox(width: 8),
+                          const Text('About'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'Logout',
+                      child: Row(
+                        children: [
+                          Icon(Icons.logout, color: buttonColor),
+                          const SizedBox(width: 8),
+                          const Text('Logout'),
+                        ],
+                      ),
+                    ),
+                  ],
             ),
           ],
         ),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: showHistory
-                ? _buildHistoryView()
-                : Column(
-                    children: [
-                      if (pinnedMessages.isNotEmpty)
-                        Column(
-                          children: [
-                            const Text(
-                              'Pinned Messages',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            ...pinnedMessages.map((message) {
-                              return Container(
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.yellow[100],
-                                  borderRadius: BorderRadius.circular(8),
+            child:
+                showHistory
+                    ? _buildHistoryView()
+                    : Column(
+                      children: [
+                        if (pinnedMessages.isNotEmpty)
+                          Column(
+                            children: [
+                              const Text(
+                                'Pinned Messages',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                child: Text(message),
+                              ),
+                              ...pinnedMessages.map((message) {
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.yellow[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(message),
+                                );
+                              }).toList(),
+                            ],
+                          ),
+                        Expanded(
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            itemCount: chatMessages.length,
+                            itemBuilder: (context, index) {
+                              if (index == 0) return const SizedBox.shrink();
+                              return _buildMessageBubble(
+                                chatMessages[index],
+                                index,
                               );
-                            }).toList(),
-                          ],
+                            },
+                          ),
                         ),
-                      Expanded(
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          itemCount: chatMessages.length,
-                          itemBuilder: (context, index) {
-                            if (index == 0) return const SizedBox.shrink();
-                            return _buildMessageBubble(
-                                chatMessages[index], index);
-                          },
-                        ),
-                      ),
-                      if (isTyping)
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text('AI is typing...'),
-                        ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
+                        if (isTyping)
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text('AI is typing...'),
+                          ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
                                 controller: _controller,
                                 decoration: const InputDecoration(
                                   labelText: "Enter your prompt",
                                   border: OutlineInputBorder(),
                                 ),
                                 onSubmitted: _sendMessage,
-                                onChanged: (_) => setState(() {})),
-                          ),
-                          const SizedBox(width: 8),
-                          _controller.text.isEmpty
-                              ? _buildMicButton(buttonColor!)
-                              : _buildSendButton(buttonColor!),
-                        ],
-                      ),
-                    ],
-                  ),
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _controller.text.isEmpty
+                                ? _buildMicButton(buttonColor!)
+                                : _buildSendButton(buttonColor!),
+                          ],
+                        ),
+                      ],
+                    ),
           ),
         ),
       ),
@@ -564,9 +580,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageBubble(Map<String, dynamic> message, int index) {
     final isSystem = message["role"] == 'system';
-    final messageColor = isSystem
-        ? (isDarkMode ? Colors.grey[900]! : Colors.grey[200]!)
-        : (isDarkMode ? Colors.deepPurple[800]! : Colors.blue[300]!);
+    final messageColor =
+        isSystem
+            ? (isDarkMode ? Colors.grey[900]! : Colors.grey[200]!)
+            : (isDarkMode ? Colors.deepPurple[800]! : Colors.blue[300]!);
     final textColor = isDarkMode ? Colors.white : Colors.black;
 
     return GestureDetector(
@@ -629,9 +646,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     if (messageReactions[index] != null)
                       Wrap(
-                        children: messageReactions[index]!.map((reaction) {
-                          return Text(reaction);
-                        }).toList(),
+                        children:
+                            messageReactions[index]!.map((reaction) {
+                              return Text(reaction);
+                            }).toList(),
                       ),
                   ],
                 ),
@@ -684,9 +702,7 @@ class _ChatScreenState extends State<ChatScreen> {
           title: const Text('Edit Message'),
           content: TextField(
             controller: editController,
-            decoration: const InputDecoration(
-              labelText: 'Edit your message',
-            ),
+            decoration: const InputDecoration(labelText: 'Edit your message'),
           ),
           actions: [
             TextButton(
@@ -764,7 +780,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-// Keep this single instance of _deleteMessage
+  // Keep this single instance of _deleteMessage
   void _deleteMessage(int messageIndex) {
     setState(() {
       // Remove the message at the specified index
@@ -789,9 +805,7 @@ class _ChatScreenState extends State<ChatScreen> {
           title: const Text('Edit Message'),
           content: TextField(
             controller: editController,
-            decoration: const InputDecoration(
-              labelText: 'Edit your message',
-            ),
+            decoration: const InputDecoration(labelText: 'Edit your message'),
           ),
           actions: [
             TextButton(
@@ -820,8 +834,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMicButton(Color buttonColor) {
     return IconButton(
-      icon:
-          Icon(_isMicPressed ? Icons.mic : Icons.mic_none, color: buttonColor),
+      icon: Icon(
+        _isMicPressed ? Icons.mic : Icons.mic_none,
+        color: buttonColor,
+      ),
       onPressed: _isMicPressed ? _stopListening : _startListening,
     );
   }
@@ -831,10 +847,7 @@ class _ChatScreenState extends State<ChatScreen> {
       children: [
         Text(
           'Chat Sessions',
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
         ),
         Expanded(
           child: ListView.builder(
@@ -846,15 +859,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: chatHistory[index].map((msg) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Text(
-                          "${msg['role']}: ${msg['content']}",
-                          style: TextStyle(fontSize: fontSize),
-                        ),
-                      );
-                    }).toList(),
+                    children:
+                        chatHistory[index].map((msg) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Text(
+                              "${msg['role']}: ${msg['content']}",
+                              style: TextStyle(fontSize: fontSize),
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ),
               );
@@ -882,15 +896,25 @@ class _ChatScreenState extends State<ChatScreen> {
       _logoutUser();
     } else if (value == 'User Settings') {
       _userSettings();
+    } else if (value == 'Support') {
+      _navigateToSupport();
     }
   }
 
   void _logoutUser() async {
     await _storage.delete(key: 'access_token');
     Navigator.pushReplacementNamed(
-        // ignore: use_build_context_synchronously
-        context,
-        '/login');
+      // ignore: use_build_context_synchronously
+      context,
+      '/login',
+    );
+  }
+
+  void _navigateToSupport() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SupportScreen()),
+    );
   }
 
   void _userSettings() {
@@ -909,7 +933,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                      "Current Size: ${fontSize.toInt()}"), // Show current value
+                    "Current Size: ${fontSize.toInt()}",
+                  ), // Show current value
                   Slider(
                     value: fontSize,
                     min: 12,
@@ -920,7 +945,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       // Update both dialog state and parent state
                       setState(() => fontSize = newSize); // Update main UI
                       setStateDialog(
-                          () => fontSize = newSize); // Update dialog UI
+                        () => fontSize = newSize,
+                      ); // Update dialog UI
                     },
                   ),
                 ],
@@ -944,7 +970,9 @@ class _ChatScreenState extends State<ChatScreen> {
       applicationName: 'AI Chat Application',
       applicationVersion: '1.1.3',
       children: const [
-        Text('This is a chat app powered by Llama AI and uses Ollama Model 3.2')
+        Text(
+          'This is a chat app powered by Llama AI and uses Ollama Model 3.2',
+        ),
       ],
     );
   }
@@ -952,7 +980,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _startNewChat() {
     setState(() {
       chatMessages = [
-        {"role": "system", "content": "You are a helpful assistant."}
+        {"role": "system", "content": "You are a helpful assistant."},
       ];
       showHistory = false;
     });
@@ -969,11 +997,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Set a higher pitch for a more female-like voice
     await _flutterTts.setPitch(
-        2.6); // Adjust pitch (1.0 is default, higher values make it more female-like)
+      2.6,
+    ); // Adjust pitch (1.0 is default, higher values make it more female-like)
 
     // Set a slightly slower speech rate for more natural speech
     await _flutterTts.setSpeechRate(
-        0.9); // Adjust speech rate (1.0 is default, lower values make it slower)
+      0.9,
+    ); // Adjust speech rate (1.0 is default, lower values make it slower)
 
     // Optionally, set a specific voice if available
     // Check available voices using _flutterTts.getVoices() and select a female voice

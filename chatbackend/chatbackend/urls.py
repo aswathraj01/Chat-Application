@@ -3,7 +3,8 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import RegisterView, UserInfoView, CustomLoginView
 from chat.views import ChatHistoryView
-from users.views import update_user  
+from users.views import update_user
+from support.views import create_support_request  
 
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
     path('api/chat/history/', ChatHistoryView.as_view(), name='chat-history'),
     path('web/', include('web_interface.urls')),
     path('admin_web/', include('admin_web.urls')),
+    path('api/support/', create_support_request, name='support_request'),
 ]
