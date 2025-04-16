@@ -2,6 +2,9 @@ from rest_framework import serializers
 from .models import CustomUser
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth.models import User
+from rest_framework import serializers
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,3 +47,24 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['login_count'] = user.login_count
 
         return data
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser  # Update this to use CustomUser
+        fields = ['username', 'email', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True}  # Make password write-only
+        }
+
+    def update(self, instance, validated_data):
+        # Update the username and email
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+
+        # If password is provided, update it
+        password = validated_data.get('password', None)
+        if password:
+            instance.set_password(password)
+        
+        instance.save()
+        return instance

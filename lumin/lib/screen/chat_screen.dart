@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:clipboard/clipboard.dart'; // For message copying
 import 'package:flutter/services.dart'; // For Clipboard and ClipboardData
 import 'package:flutter_tts/flutter_tts.dart'; // Add this import
+import 'user_settings_screen.dart';
 
 class ChatHistoryItem {
   final String message;

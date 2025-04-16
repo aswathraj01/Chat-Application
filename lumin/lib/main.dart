@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'screen/login_screen.dart';
 import 'screen/signup_screen.dart';
 import 'screen/chat_screen.dart';
+import 'screen/user_settings_screen.dart';
 
 void main() {
   runApp(const MyAppWrapper());
@@ -60,6 +61,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => SignupScreen(),
         '/chat': (context) => ChatScreen(),
+        '/user-settings': (context) => UserSettingsScreen(),
       },
     );
   }
