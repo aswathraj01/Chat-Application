@@ -207,7 +207,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://localhost:11434/api/chat"),
+        Uri.parse("http://10.0.2.2:11434/api/chat"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(data),
       );
