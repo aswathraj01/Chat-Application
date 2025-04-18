@@ -91,9 +91,6 @@ def edit_user(request, user_id):
         region = request.POST.get('region')
         is_admin = request.POST.get('is_admin') == 'on'
 
-        # Check if the values are being received correctly (for debugging)
-        print(f"First Name: {first_name}, Last Name: {last_name}, Email: {email}, DOB: {dob}, Region: {region}, Is Admin: {is_admin}")
-
         # Update user details
         user.first_name = first_name
         user.last_name = last_name
@@ -106,7 +103,6 @@ def edit_user(request, user_id):
             user.save()
             messages.success(request, 'User details updated successfully.')
         except Exception as e:
-            print(f"Error saving user: {e}")
             messages.error(request, 'An error occurred while saving the user details.')
 
         return redirect('user_list')  # Redirect to the user list after saving
@@ -132,7 +128,7 @@ def delete_user(request, user_id):
 # Disable user account
 @login_required
 def disable_user(request, user_id):
-    CustomUser = get_user_model()  # Ensure CustomUser is defined here
+    CustomUser = get_user_model()
     user = get_object_or_404(CustomUser, id=user_id)
     user.is_active = False  # Set is_active to False to disable the user
     user.save()
@@ -143,7 +139,7 @@ def disable_user(request, user_id):
 # Activate user account
 @login_required
 def activate_user(request, user_id):
-    CustomUser = get_user_model()  # Ensure CustomUser is defined here
+    CustomUser = get_user_model()
     user = get_object_or_404(CustomUser, id=user_id)
     user.is_active = True  # Set is_active to True to activate the user
     user.save()
@@ -173,3 +169,30 @@ def change_role(request, user_id):
     
     # Redirect back to the roles page
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+
+# Chart view (for displaying charts)
+@login_required
+def chart_view(request):
+    # Example of data aggregation for charts, customize as per your requirement
+    CustomUser = get_user_model()
+    
+    # Data for number of messages per month
+    monthly_messages = SupportRequest.objects.extra({'month': 'EXTRACT(MONTH FROM created_at)'}).values('month').annotate(count=Count('id')).order_by('month')
+
+    # Data for system stats
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_info = psutil.virtual_memory()
+    memory_usage = memory_info.percent
+    disk_info = psutil.disk_usage('/')
+    disk_usage = disk_info.percent
+
+    context = {
+        'monthly_messages': monthly_messages,
+        'cpu_usage': cpu_usage,
+        'memory_usage': memory_usage,
+        'disk_usage': disk_usage,
+    }
+
+    return render(request, 'admin_web/chart.html', context)
+

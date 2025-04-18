@@ -1,0 +1,70 @@
+{% extends 'admin_web/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Admin Settings</h2>
+    
+    <form method="POST" action="{% url 'admin_settings' %}">
+        {% csrf_token %}
+
+        <!-- Username -->
+        <div class="form-group mb-3">
+            <label for="username">Username</label>
+            <input 
+                type="text" 
+                class="form-control" 
+                id="username" 
+                name="username" 
+                value="{{ user.username }}" 
+                required
+            >
+        </div>
+
+        <!-- Email / Admin Credential -->
+        <div class="form-group mb-3">
+            <label for="email">Admin Email</label>
+            <input 
+                type="email" 
+                class="form-control" 
+                id="email" 
+                name="email" 
+                value="{{ user.email }}" 
+                required
+            >
+        </div>
+
+        <!-- Password -->
+        <div class="form-group mb-3">
+            <label for="password">New Password</label>
+            <input 
+                type="password" 
+                class="form-control" 
+                id="password" 
+                name="password" 
+                placeholder="Leave blank to keep current password"
+            >
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="form-group mb-4">
+            <label for="confirm_password">Confirm Password</label>
+            <input 
+                type="password" 
+                class="form-control" 
+                id="confirm_password" 
+                name="confirm_password"
+            >
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update Settings</button>
+    </form>
+
+    {% if messages %}
+    <div class="mt-4">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

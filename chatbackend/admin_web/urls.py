@@ -12,4 +12,5 @@ urlpatterns = [
     path('users/activate/<int:user_id>/', views.activate_user, name='activate_user'),
     path('users/roles/', views.roles_view, name='roles'),  # Roles page
     path('users/change_role/<int:user_id>/', views.change_role, name='change_role'),  # Change role action
+    path('charts/', views.chart_view, name='chart_view'),
 ]
