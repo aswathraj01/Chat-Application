@@ -1,162 +1,224 @@
-{% load static %}
-<!doctype html>
-<!-- 
-* Bootstrap Simple Admin Template
-* Version: 2.1
-* Author: Alexis Luna
-* Website: https://github.com/alexis-luna/bootstrap-simple-admin-template
--->
-<html lang="en">
+{% extends 'admin_web/base.html' %}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>{% block title %}Dashboard | Admin Panel{% endblock %}</title>
-
-    <!-- FontAwesome icons -->
-    <link href="{% static 'admin_web/vendor/fontawesome/css/fontawesome.min.css' %}" rel="stylesheet">
-    <link href="{% static 'admin_web/vendor/fontawesome/css/solid.min.css' %}" rel="stylesheet">
-    <link href="{% static 'admin_web/vendor/fontawesome/css/brands.min.css' %}" rel="stylesheet">
-
-    <!-- Bootstrap CSS -->
-    <link href="{% static 'admin_web/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
-
-    <!-- Custom CSS -->
-    <link href="{% static 'admin_web/css/master.css' %}" rel="stylesheet">
-
-    <!-- Flag Icon CSS -->
-    <link href="{% static 'admin_web/vendor/flagiconcss/css/flag-icon.min.css' %}" rel="stylesheet">
-</head>
-
-<body>
-    <div class="wrapper">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="active">
-            <div class="sidebar-header">
-                <img src="{% static 'admin_web/img/bootstraper-logo.png' %}" alt="bootraper logo" class="app-logo">
-            </div>
-            <ul class="list-unstyled components text-secondary">
-                <li>
-                    <a href="{% url 'dashboard' %}"><i class="fas fa-home"></i> Dashboard</a>
-                </li>
-                <li>
-                    <a href=""><i class="fas fa-file-alt"></i> Forms</a>
-                </li>
-                <li>
-                    <a href=""><i class="fas fa-table"></i> Tables</a>
-                </li>
-                <li>
-                    <a href=""><i class="fas fa-chart-bar"></i> Charts</a>
-                </li>
-                <li>
-                    <a href=""><i class="fas fa-icons"></i> Icons</a>
-                </li>
-                <li>
-                    <a href="#uielementsmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle no-caret-down"><i class="fas fa-layer-group"></i> UI Elements</a>
-                    <ul class="collapse list-unstyled" id="uielementsmenu">
-                        <li>
-                            <a href=""><i class="fas fa-angle-right"></i> Buttons</a>
-                        </li>
-                        <li>
-                            <a href=""><i class="fas fa-angle-right"></i> Badges</a>
-                        </li>
-                        <li>
-                            <a href=""><i class="fas fa-angle-right"></i> Cards</a>
-                        </li>
-                        <li>
-                            <a href=""><i class="fas fa-angle-right"></i> Alerts</a>
-                        </li>
-                        <li>
-                            <a href=""><i class="fas fa-angle-right"></i> Tabs</a>
-                        </li>
-                        <li>
-                            <a href=""><i class="fas fa-angle-right"></i> Date & Time Picker</a>
-                        </li>
-                    </ul>
-                </li>
-                <li>
-                    <a href="#authmenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle no-caret-down"><i class="fas fa-user-shield"></i> Authentication</a>
-                    <ul class="collapse list-unstyled" id="authmenu">
-                        <li>
-                            <a href=""><i class="fas fa-lock"></i> Login</a>
-                        </li>
-                        <li>
-                            <a href=""><i class="fas fa-user-plus"></i> Signup</a>
-                        </li>
-                        <li>
-                            <a href=""><i class="fas fa-user-lock"></i> Forgot password</a>
-                        </li>
-                    </ul>
-                </li>
-                <li>
-                    <a href="{% url 'user_list' %}"><i class="fas fa-user-friends"></i> Users</a>
-                </li>                
-                <li>
-                    <a href=""><i class="fas fa-cog"></i> Settings</a>
-                </li>
-                <li>
-                    <a href="{% url 'admin_logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                </li>
-            </ul>
-        </nav>
-
-        <!-- Main Content Area -->
-        <div id="body" class="active">
-            <!-- Navbar -->
-            <nav class="navbar navbar-expand-lg navbar-white bg-white">
-                <button type="button" id="sidebarCollapse" class="btn btn-light">
-                    <i class="fas fa-bars"></i><span></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="nav navbar-nav ms-auto">
-                        <li class="nav-item dropdown">
-                            <div class="nav-dropdown">
-                                <a href="#" id="nav1" class="nav-item nav-link dropdown-toggle text-secondary" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-link"></i> <span>Quick Links</span> <i style="font-size: .8em;" class="fas fa-caret-down"></i>
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-end nav-link-menu" aria-labelledby="nav1">
-                                    <ul class="nav-list">
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-list"></i> Access Logs</a></li>
-                                        <div class="dropdown-divider"></div>
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-database"></i> Back ups</a></li>
-                                        <div class="dropdown-divider"></div>
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-cloud-download-alt"></i> Updates</a></li>
-                                        <div class="dropdown-divider"></div>
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-user-shield"></i> Roles</a></li>
-                                    </ul>
+{% block content %}
+            <div class="container mt-4">
+                <!-- Messages Per Month and Users Per Country Section (Side by side) -->
+                <div class="row">
+                    <!-- Messages Per Month -->
+                    <div class="col-md-6">
+                        <h4>Messages Per Month</h4>
+                        <div class="card">
+                            <div class="content">
+                                <div class="head">
+                                    <h5 class="mb-0">Messages Per Month</h5>
+                                </div>
+                                <div class="canvas-wrapper">
+                                    <canvas id="messagesPerMonthChart" width="400" height="200"></canvas>
                                 </div>
                             </div>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <div class="nav-dropdown">
-                                <a href="#" id="nav2" class="nav-item nav-link dropdown-toggle text-secondary" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-user"></i> <span>{{ user.first_name }} {{ user.last_name }}</span> <i style="font-size: .8em;" class="fas fa-caret-down"></i>
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-end nav-link-menu">
-                                    <ul class="nav-list">
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-address-card"></i> Profile</a></li>
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-envelope"></i> Messages</a></li>
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-cog"></i> Settings</a></li>
-                                        <div class="dropdown-divider"></div>
-                                        <li><a href="{% url 'admin_logout' %}" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                                    </ul>
+                        </div>
+                    </div>
+            
+                    <!-- Users Per Country -->
+                    <div class="col-md-6">
+                        <h4 class="mt-5 mt-md-0">Users Per Country</h4>
+                        <div class="card">
+                            <div class="content">
+                                <div class="head">
+                                    <h5 class="mb-0">Users Per Country</h5>
+                                </div>
+                                <div class="canvas-wrapper">
+                                    <canvas id="usersPerCountryChart" width="400" height="200"></canvas>
                                 </div>
                             </div>
-                        </li>
-                    </ul>
+                        </div>
+                    </div>
                 </div>
-            </nav>
+            
+                <!-- System Resource Utilization Section (Side by side) -->
+                <div class="container mt-4">
+                    <h4>System Resource Utilization</h4>
+                    <div class="row">
+                        <!-- CPU Usage -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="content">
+                                    <div class="head">
+                                        <h5 class="mb-0">CPU Usage</h5>
+                                    </div>
+                                    <div class="canvas-wrapper">
+                                        <canvas id="cpuChart" width="150" height="150"></canvas>
+                                        <p class="chart-title">CPU Usage</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                
+                        <!-- Memory Usage -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="content">
+                                    <div class="head">
+                                        <h5 class="mb-0">Memory Usage</h5>
+                                    </div>
+                                    <div class="canvas-wrapper">
+                                        <canvas id="memoryChart" width="150" height="150"></canvas>
+                                        <p class="chart-title">Memory Usage</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                
+                        <!-- Disk Usage -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="content">
+                                    <div class="head">
+                                        <h5 class="mb-0">Disk Usage</h5>
+                                    </div>
+                                    <div class="canvas-wrapper">
+                                        <canvas id="diskChart" width="150" height="150"></canvas>
+                                        <p class="chart-title">Disk Usage</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Extract the data passed from the Django context
+                    const messagesPerMonthData = {{ messages_per_month_data|safe }};
+                    
+                    // Prepare the chart data
+                    const messagesPerMonthLabels = messagesPerMonthData.map(item => item.month);
+                    const messagesPerMonthDataValues = messagesPerMonthData.map(item => item.message_count);
+                    
+                    // Chart for Messages Per Month (Line Chart)
+                    const messagesPerMonthCtx = document.getElementById('messagesPerMonthChart').getContext('2d');
+                    const messagesPerMonthChart = new Chart(messagesPerMonthCtx, {
+                        type: 'line',
+                        data: {
+                            labels: messagesPerMonthLabels,
+                            datasets: [{
+                                label: 'Messages',
+                                data: messagesPerMonthDataValues,
+                                borderColor: '#FF5733',
+                                fill: false,
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' }
+                            }
+                        }
+                    });
+                });
+                </script>
+
+            <!--Chart For User count-->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Extract data passed from the Django context
+                    const usersPerCountryData = {{ users_per_country_data|safe }};
+                    
+                    // Prepare the chart data
+                    const usersPerCountryLabels = usersPerCountryData.map(item => item.region);
+                    const usersPerCountryCounts = usersPerCountryData.map(item => item.user_count);
+                    
+                    // Chart for Users Per Country (Bar Chart)
+                    const usersPerCountryCtx = document.getElementById('usersPerCountryChart').getContext('2d');
+                    const usersPerCountryChart = new Chart(usersPerCountryCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: usersPerCountryLabels,
+                            datasets: [{
+                                label: 'Users',
+                                data: usersPerCountryCounts,
+                                backgroundColor: '#33B5FF',
+                                borderColor: '#007BFF',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' }
+                            }
+                        }
+                    });
+                });
+                </script>
+                
+            <!--Chart for System Util-->
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    // Function to fetch system resource data (you can modify this to make an API call to the backend)
+                    function fetchSystemResourceData() {
+                        // For now, let's assume the values are being rendered directly from the Django template
+                        return {
+                            cpu: {{ cpu_usage|floatformat:1 }},
+                            memory: {{ memory_usage|floatformat:1 }},
+                            disk: {{ disk_usage|floatformat:1 }}
+                        };
+                    }
+            
+                    // Function to create or update the usage chart
+                    function createUsageChart(canvasId, usageValue, color) {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) {
+                            console.error(`Canvas with ID '${canvasId}' not found.`);
+                            return;
+                        }
+            
+                        const ctx = canvas.getContext('2d');
+                        new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Used', 'Free'],
+                                datasets: [{
+                                    data: [usageValue, 100 - usageValue],
+                                    backgroundColor: [color, '#e0e0e0'],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                cutout: '70%'
+                            }
+                        });
+                    }
+            
+                    // Function to update the charts with the new data
+                    function updateCharts() {
+                        const { cpu, memory, disk } = fetchSystemResourceData();
+            
+                        // Clear and recreate the charts with new data
+                        createUsageChart('cpuChart', cpu, 'rgba(255, 99, 132, 0.8)');
+                        createUsageChart('memoryChart', memory, 'rgba(54, 162, 235, 0.8)');
+                        createUsageChart('diskChart', disk, 'rgba(255, 206, 86, 0.8)');
+                    }
+            
+                    // Initial chart rendering
+                    updateCharts();
+            
+                    // Update charts every 5 seconds (5000 milliseconds)
+                    setInterval(updateCharts, 5000);
+                });
+            </script>
+            
             
             <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-info float-end me-1">
                 <i class="fas fa-angle-left"></i> <span class="btn-header">Return to Dashboard</span>
             </a>
-            <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0"></script>
-            
-    <!-- Scripts -->
-    <script src="{% static 'admin_web/vendor/jquery/jquery.min.js' %}"></script>
-    <script src="{% static 'admin_web/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'admin_web/js/script.js' %}"></script>
-</body>
-
-</html>
+{% endblock %}

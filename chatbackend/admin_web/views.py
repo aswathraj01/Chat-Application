@@ -8,6 +8,14 @@ from support.models import SupportRequest
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.db.models import Count
+from django.utils import timezone
+from django.db.models.functions import TruncMonth
+from users.models import CustomUser
+from chat.models import ChatHistory
+import json
+
 
 # Admin login view
 def admin_login(request):
@@ -174,25 +182,63 @@ def change_role(request, user_id):
 # Chart view (for displaying charts)
 @login_required
 def chart_view(request):
-    # Example of data aggregation for charts, customize as per your requirement
-    CustomUser = get_user_model()
-    
-    # Data for number of messages per month
-    monthly_messages = SupportRequest.objects.extra({'month': 'EXTRACT(MONTH FROM created_at)'}).values('month').annotate(count=Count('id')).order_by('month')
+    # Get the current date for filtering messages within the last 12 months
+    current_date = timezone.now()
 
-    # Data for system stats
-    cpu_usage = psutil.cpu_percent(interval=1)
-    memory_info = psutil.virtual_memory()
-    memory_usage = memory_info.percent
-    disk_info = psutil.disk_usage('/')
-    disk_usage = disk_info.percent
+    # Fetch the number of messages per month for the last 12 months
+    messages_per_month = (
+        ChatHistory.objects
+        .annotate(month=TruncMonth('timestamp'))
+        .filter(timestamp__gte=current_date - timezone.timedelta(days=365))
+        .values('month')
+        .annotate(message_count=Count('id'))
+        .order_by('month')
+    )
+
+    messages_per_month_data = [
+        {'month': message['month'].strftime('%Y-%m'), 'message_count': message['message_count']}
+        for message in messages_per_month
+    ]
+
+    # Pass the data to the template
+    context = {
+        'messages_per_month_data': messages_per_month_data,
+    }
+    
+    # Fetch the number of users per country
+    users_per_country = (
+        CustomUser.objects
+        .values('region')
+        .annotate(user_count=Count('id'))
+        .order_by('region')
+    )
+
+    users_per_country_data = [
+        {'region': user['region'], 'user_count': user['user_count']}
+        for user in users_per_country
+    ]
+
+    # Pass the data to the template
+    context = {
+        'users_per_country_data': users_per_country_data,
+    }
+
+    # System resource utilization using psutil
+    cpu_usage = psutil.cpu_percent()
+    memory_usage = psutil.virtual_memory().percent
+    disk_usage = psutil.disk_usage('/').percent
 
     context = {
-        'monthly_messages': monthly_messages,
+        'messages_per_month_data': messages_per_month_data,
+        'users_per_country_data': users_per_country_data,
         'cpu_usage': cpu_usage,
         'memory_usage': memory_usage,
         'disk_usage': disk_usage,
     }
 
-    return render(request, 'admin_web/chart.html', context)
+    print("CPU:", cpu_usage)
+    print("Memory:", memory_usage)
+    print("Disk:", disk_usage)
 
+
+    return render(request, 'admin_web/chart.html', context)

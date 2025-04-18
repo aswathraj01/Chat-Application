@@ -18,14 +18,8 @@
     <link href="{% static 'admin_web/vendor/fontawesome/css/fontawesome.min.css' %}" rel="stylesheet">
     <link href="{% static 'admin_web/vendor/fontawesome/css/solid.min.css' %}" rel="stylesheet">
     <link href="{% static 'admin_web/vendor/fontawesome/css/brands.min.css' %}" rel="stylesheet">
-
-    <!-- Bootstrap CSS -->
     <link href="{% static 'admin_web/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
-
-    <!-- Custom CSS -->
     <link href="{% static 'admin_web/css/master.css' %}" rel="stylesheet">
-
-    <!-- Flag Icon CSS -->
     <link href="{% static 'admin_web/vendor/flagiconcss/css/flag-icon.min.css' %}" rel="stylesheet">
 </head>
 
@@ -47,7 +41,7 @@
                     <a href=""><i class="fas fa-table"></i> Tables</a>
                 </li>
                 <li>
-                    <a href=""><i class="fas fa-chart-bar"></i> Charts</a>
+                    <a href="{% url 'chart_view' %}"><i class="fas fa-chart-bar"></i> Charts</a>
                 </li>
                 <li>
                     <a href=""><i class="fas fa-icons"></i> Icons</a>

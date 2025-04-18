@@ -1,0 +1,46 @@
+.canvas-wrapper {
+    text-align: center;
+}
+
+.charts-container {
+    display: flex;
+    justify-content: space-between; /* Distribute charts evenly */
+    gap: 20px; /* Add space between the charts */
+}
+
+.chart-container {
+    text-align: center;
+    width: 30%; /* Set a fixed width for each chart container */
+}
+
+.chart-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.card {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.canvas-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.chart-title {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.mt-5 {
+    margin-top: 3rem !important;
+}
+
+.mt-md-0 {
+    margin-top: 0 !important;
+}
