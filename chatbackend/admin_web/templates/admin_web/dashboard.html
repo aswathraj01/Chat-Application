@@ -40,6 +40,7 @@
             font-weight: bold;
             margin-top: 8px;
         }
+        
     </style>
 </head>
 
@@ -149,7 +150,7 @@
                                         <div class="dropdown-divider"></div>
                                         <li><a href="" class="dropdown-item"><i class="fas fa-cloud-download-alt"></i> Updates</a></li>
                                         <div class="dropdown-divider"></div>
-                                        <li><a href="" class="dropdown-item"><i class="fas fa-user-shield"></i> Roles</a></li>
+                                        <li><a href="{% url 'roles' %}" class="dropdown-item"><i class="fas fa-user-shield"></i> Roles</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -287,6 +288,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <div class="row">
+                                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                                 <div class="col-md-6">
                                     <div class="card">
                                         <div class="content">
@@ -366,21 +368,15 @@
                             <div class="card">
                                 <div class="content">
                                     <div class="head">
-                                        <h5 class="mb-0">Data Overview</h5>
-                                        <p class="text-muted">Current year sales data</p>
+                                        <h5 class="mb-0">GPU Utilization</h5>
+                                        <p class="text-muted">Real-time GPU utilization and memory usage</p>
                                     </div>
                                     <div class="canvas-wrapper">
-                                        <canvas class="chart" id="sales"></canvas>
+                                        <canvas class="chart" id="gpuChart"></canvas>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                        
-
-
-                   
                     </div>
                 </div>
             </div>
@@ -389,7 +385,102 @@
     <script src="{% static 'admin_web/vendor/jquery/jquery.min.js' %}"></script>
     <script src="{% static 'admin_web/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'admin_web/js/script.js' %}"></script>
+
+    <script>
+        // Get GPU data passed from the backend
+        var gpuNames = {{ gpu_names|safe }};
+        var gpuUtilizations = {{ gpu_utilizations|safe }};
+        var gpuMemoryUsages = {{ gpu_memory_usages|safe }};
     
+        // Create the chart using Chart.js
+        var ctx = document.getElementById('gpuChart').getContext('2d');
+        var gpuChart = new Chart(ctx, {
+            type: 'bar',  // You can use 'bar' or 'line' as chart types
+            data: {
+                labels: gpuNames,  // X-axis labels (GPU names)
+                datasets: [
+                    {
+                        label: 'GPU Load (%)',
+                        data: gpuUtilizations,  // Y-axis data (GPU utilization in %)
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',  // Bar color for GPU load
+                        borderColor: 'rgba(54, 162, 235, 1)',  // Border color for GPU load
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'GPU Memory Usage (%)',
+                        data: gpuMemoryUsages,  // Y-axis data (GPU memory usage in %)
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',  // Bar color for memory usage
+                        borderColor: 'rgba(255, 99, 132, 1)',  // Border color for memory usage
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,  // Start the y-axis from zero
+                        max: 100  // Limit the maximum value to 100
+                    }
+                }
+            }
+        });
+    </script>
+<script>
+    // Declare a unique variable for the traffic chart context
+    const trafficFlowCtx = document.getElementById('trafficflow').getContext('2d');
+
+    const trafficFlowChart = new Chart(trafficFlowCtx, {
+        type: 'line',
+        data: {
+            labels: {{ login_labels|safe }},
+            datasets: [{
+                label: 'Users Last Logged In (per month)',
+                data: {{ login_data|safe }},
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true },
+                tooltip: {
+                    callbacks: {
+                        label: function(tooltipItem) {
+                            const value = tooltipItem.raw;
+                            if (typeof value === 'number') {
+                                return value.toFixed(2);  // Apply to numbers only
+                            } else {
+                                return value;  // Return raw value if not a number
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'User Logins'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    }
+                }
+            }
+        }
+    });
+</script>
+    <!-- System Util Script-->
 <script>
     // Example values to simulate CPU, memory, and disk usage
     let cpuUsage = {{ cpu_usage }};

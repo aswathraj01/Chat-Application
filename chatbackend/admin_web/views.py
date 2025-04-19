@@ -15,6 +15,10 @@ from django.db.models.functions import TruncMonth
 from users.models import CustomUser
 from chat.models import ChatHistory
 import json
+from django.db.models.functions import TruncMonth
+from django.utils.timezone import make_naive
+import calendar
+import GPUtil
 
 
 # Admin login view
@@ -35,13 +39,34 @@ def admin_login(request):
 def dashboard(request):
     CustomUser = get_user_model()
 
+    # --- Total logins approximation per month using last_login ---
+    monthly_logins = (
+        CustomUser.objects.exclude(last_login=None)
+        .annotate(month=TruncMonth('last_login'))
+        .values('month')
+        .annotate(count=Count('id'))
+        .order_by('month')
+    )
+
+    # Format for graph
+    month_labels = []
+    login_counts = []
+
+    for entry in monthly_logins:
+        if entry['month']:
+            naive_month = make_naive(entry['month'])  # removes timezone
+            label = f"{calendar.month_name[naive_month.month]} {naive_month.year}"
+            month_labels.append(label)
+            login_counts.append(entry['count'])
+
+    # Other dashboard values
     total_users = CustomUser.objects.count()
     total_logins = CustomUser.objects.aggregate(Sum('login_count'))['login_count__sum'] or 0
     total_requests = SupportRequest.objects.count()
 
     region_data = CustomUser.objects.values('region') \
-        .annotate(user_count=Count('id')) \
-        .order_by('-user_count')
+    .annotate(user_count=Count('id')) \
+    .order_by('-user_count')
 
     regions = []
     user_counts = []
@@ -52,14 +77,26 @@ def dashboard(request):
 
     combined_data = zip(regions, user_counts)
 
-    # Get system statistics
+
     cpu_usage = psutil.cpu_percent(interval=1)
-    memory_info = psutil.virtual_memory()
-    memory_usage = memory_info.percent
-    disk_info = psutil.disk_usage('/')
-    disk_usage = disk_info.percent
+    memory_usage = psutil.virtual_memory().percent
+    disk_usage = psutil.disk_usage('/').percent
+
+    # Get GPU stats
+    gpus = GPUtil.getGPUs()
+    gpu_utilizations = []
+    gpu_memory_usages = []
+    gpu_names = []
+
+    for gpu in gpus:
+        gpu_names.append(gpu.name)  # GPU name
+        gpu_utilizations.append(gpu.load * 100)  # GPU load (percentage)
+        gpu_memory_usages.append(gpu.memoryUsed / gpu.memoryTotal * 100)  # Memory usage (percentage)
+
 
     context = {
+        'login_labels': json.dumps(month_labels),
+        'login_data': json.dumps(login_counts),
         'combined_data': combined_data,
         'total_users': total_users,
         'total_logins': total_logins,
@@ -67,9 +104,13 @@ def dashboard(request):
         'cpu_usage': cpu_usage,
         'memory_usage': memory_usage,
         'disk_usage': disk_usage,
+        'gpu_names': gpu_names,
+        'gpu_utilizations': gpu_utilizations,
+        'gpu_memory_usages': gpu_memory_usages,
     }
 
     return render(request, 'admin_web/dashboard.html', context)
+
 
 # Admin logout view
 @login_required
