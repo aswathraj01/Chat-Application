@@ -5,6 +5,7 @@ from users.views import RegisterView, UserInfoView, CustomLoginView
 from chat.views import ChatHistoryView
 from users.views import update_user
 from support.views import create_support_request  
+from admin_web import views
 
 
 urlpatterns = [
@@ -18,4 +19,5 @@ urlpatterns = [
     path('web/', include('web_interface.urls')),
     path('admin_web/', include('admin_web.urls')),
     path('api/support/', create_support_request, name='support_request'),
+    path('settings/', views.admin_settings_view, name='admin_settings'),
 ]

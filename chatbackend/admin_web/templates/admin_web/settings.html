@@ -1,70 +1,167 @@
 {% extends 'admin_web/base.html' %}
 
 {% block content %}
-<div class="container mt-5">
-    <h2 class="mb-4">Admin Settings</h2>
-    
-    <form method="POST" action="{% url 'admin_settings' %}">
-        {% csrf_token %}
-
-        <!-- Username -->
-        <div class="form-group mb-3">
-            <label for="username">Username</label>
-            <input 
-                type="text" 
-                class="form-control" 
-                id="username" 
-                name="username" 
-                value="{{ user.username }}" 
-                required
-            >
+<div class="content">
+    <div class="container">
+        <div class="page-title">
+            <h3>Settings</h3>
         </div>
 
-        <!-- Email / Admin Credential -->
-        <div class="form-group mb-3">
-            <label for="email">Admin Email</label>
-            <input 
-                type="email" 
-                class="form-control" 
-                id="email" 
-                name="email" 
-                value="{{ user.email }}" 
-                required
-            >
+        <div class="card">
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="settingsTab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="general-tab" data-bs-toggle="tab" href="#general" role="tab">General</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="system-tab" data-bs-toggle="tab" href="#system" role="tab">System</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="email-tab" data-bs-toggle="tab" href="#email" role="tab">Email</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="attributions-tab" data-bs-toggle="tab" href="#attributions" role="tab">Attributions</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content pt-3" id="settingsTabContent">
+                    <!-- General Tab -->
+                    <div class="tab-pane fade show active" id="general" role="tabpanel">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="col-md-6">
+                                <p class="text-muted">General settings such as site title, description, and logos.</p>
+
+                                <div class="mb-3">
+                                    <label for="site-title" class="form-label">App Title</label>
+                                    <input type="text" name="site_title" class="form-control" id="site-title">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="site-description" class="form-label">App Description</label>
+                                    <textarea class="form-control" name="site_description" id="site-description"></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Site Logo</label>
+                                    <input class="form-control" name="site_logo" type="file" id="formFile1">
+                                    <small class="text-muted">Max size: 1MB</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Maintenance Mode</label>
+                                    <select class="form-select" name="maintenance_mode">
+                                        <option value="off">Off</option>
+                                        <option value="on">On</option>
+                                    </select>
+                                    <small class="text-muted">Put the app into maintenance mode for updates or fixes.</small>
+                                </div>
+
+                                <div class="mb-3 text-end">
+                                    <button class="btn btn-success" type="submit"><i class="fas fa-check"></i> Save</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- System Tab -->
+                    <div class="tab-pane fade" id="system" role="tabpanel">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="col-md-6">
+                                <p class="text-muted">Application settings, language, time zones, etc.</p>
+
+                                <div class="mb-3">
+                                    <label for="language" class="form-label">Default Language</label>
+                                    <select class="form-select" name="language" id="language">
+                                        <option value="en">English</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="fr">French</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3 text-end">
+                                    <button class="btn btn-success" type="submit"><i class="fas fa-check"></i> Save</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Email Tab -->
+                    <div class="tab-pane fade" id="email" role="tabpanel">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="col-md-6">
+                                <p class="text-muted">Email SMTP and related settings.</p>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Protocol</label>
+                                    <select name="email_protocol" class="form-select">
+                                        <option value="">Select Protocol</option>
+                                        <option value="smtp">SMTP</option>
+                                        <option value="sendmail">Sendmail</option>
+                                        <option value="phpmailer">PHP Mailer</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP Host</label>
+                                    <input type="text" name="smtp_host" class="form-control">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP Username</label>
+                                    <input type="text" name="smtp_username" class="form-control">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP Security</label>
+                                    <select name="smtp_security" class="form-select">
+                                        <option value="">Select Security</option>
+                                        <option value="tls">TLS</option>
+                                        <option value="ssl">SSL</option>
+                                        <option value="none">None</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP Port</label>
+                                    <input type="text" name="smtp_port" class="form-control">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP Password</label>
+                                    <input type="password" name="smtp_password" class="form-control">
+                                </div>
+
+                                <div class="mb-3 text-end">
+                                    <button class="btn btn-success" type="submit"><i class="fas fa-check"></i> Save</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Attribution Tab -->
+                    <div class="tab-pane fade" id="attributions" role="tabpanel">
+                        <div class="col-md-6">
+                            <p class="text-muted">License Information</p>
+                            <p class="mb-0"><strong>LUMIN AI Chat Application</strong></p>
+                            <p class="text-muted">MIT License</p>
+                            <p class="ps-4 col-md-6">
+                                Copyright © Helix Technologies 2023
+                                <br>
+                                <br>
+                                Permission is hereby granted, free of charge, to any person obtaining a copy
+                                of this software and associated documentation files (the "Software"), to deal
+                                in the Software without restriction...
+
+                                [Full MIT license continues...]
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <!-- Password -->
-        <div class="form-group mb-3">
-            <label for="password">New Password</label>
-            <input 
-                type="password" 
-                class="form-control" 
-                id="password" 
-                name="password" 
-                placeholder="Leave blank to keep current password"
-            >
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="form-group mb-4">
-            <label for="confirm_password">Confirm Password</label>
-            <input 
-                type="password" 
-                class="form-control" 
-                id="confirm_password" 
-                name="confirm_password"
-            >
-        </div>
-
-        <button type="submit" class="btn btn-primary">Update Settings</button>
-    </form>
-
-    {% if messages %}
-    <div class="mt-4">
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-    {% endif %}
+    </div>  
 </div>
 {% endblock %}

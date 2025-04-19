@@ -283,3 +283,30 @@ def chart_view(request):
 
 
     return render(request, 'admin_web/chart.html', context)
+
+
+@login_required
+def admin_settings_view(request):
+    if request.method == 'POST':
+        # Handle form submission
+        site_title = request.POST.get('site_title')
+        site_description = request.POST.get('site_description')
+        language = request.POST.get('language')
+        # Add other settings fields as needed...
+
+        # Handle file uploads
+        site_logo = request.FILES.get('site_logo')
+        site_favicon = request.FILES.get('site_favicon')
+
+        # This is where you would save the data to the database
+        # For now, just simulate a success
+        messages.success(request, 'Settings updated successfully.')
+
+        return redirect('admin_settings')
+
+    # If using a settings model, load it here
+    # settings = SiteSettings.objects.first()
+    context = {
+        # 'settings': settings
+    }
+    return render(request, 'admin_web/settings.html', context)
