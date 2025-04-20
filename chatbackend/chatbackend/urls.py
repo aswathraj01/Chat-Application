@@ -8,6 +8,7 @@ from support.views import create_support_request
 from admin_web import views
 
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login/', CustomLoginView.as_view(), name='custom_token_obtain'),  # Use custom view
@@ -20,4 +21,8 @@ urlpatterns = [
     path('admin_web/', include('admin_web.urls')),
     path('api/support/', create_support_request, name='support_request'),
     path('settings/', views.admin_settings_view, name='admin_settings'),
+    path('support/', views.support_list, name='support_list'),
+    path('support/toggle_fixed/<int:ticket_id>/', views.toggle_fixed, name='toggle_fixed'),
+    path('support/toggle_important/<int:ticket_id>/', views.toggle_important, name='toggle_important'),
+    path('support/respond/<int:ticket_id>/', views.respond_to_ticket, name='respond_to_ticket'),
 ]

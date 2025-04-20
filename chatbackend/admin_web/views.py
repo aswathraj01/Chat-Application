@@ -19,6 +19,9 @@ from django.db.models.functions import TruncMonth
 from django.utils.timezone import make_naive
 import calendar
 import GPUtil
+from django.views.decorators.http import require_POST
+from django.urls import reverse
+from support.models import SupportRequest
 
 
 # Admin login view
@@ -310,3 +313,41 @@ def admin_settings_view(request):
         # 'settings': settings
     }
     return render(request, 'admin_web/settings.html', context)
+
+
+@login_required
+def support_list(request):
+    supports = SupportRequest.objects.all()
+    return render(request, 'admin_web/support.html', {'supports': supports})
+
+@require_POST
+@login_required
+def toggle_fixed(request, ticket_id):
+    ticket = get_object_or_404(SupportRequest, id=ticket_id)
+    ticket.is_fixed = not ticket.is_fixed
+    ticket.save()
+    messages.success(request, f"Marked as {'fixed' if ticket.is_fixed else 'not fixed'}.")
+    return redirect('support_list')
+
+@require_POST
+@login_required
+def toggle_important(request, ticket_id):
+    ticket = get_object_or_404(SupportRequest, id=ticket_id)
+    ticket.is_important = not ticket.is_important
+    ticket.save()
+    messages.success(request, f"Marked as {'important' if ticket.is_important else 'not important'}.")
+    return redirect('support_list')
+
+@login_required
+def respond_to_ticket(request, ticket_id):
+    ticket = get_object_or_404(SupportRequest, id=ticket_id)
+
+    # Handle POST request (form submission)
+    if request.method == 'POST':
+        response = request.POST.get('response')
+        ticket.response = response  # Save the admin's response
+        ticket.save()  # Save the response to the database
+        return redirect('support_list')  # Redirect to the support list after responding
+
+    # Handle GET request (display ticket details and response form)
+    return render(request, 'admin_web/respond.html', {'ticket': ticket})
