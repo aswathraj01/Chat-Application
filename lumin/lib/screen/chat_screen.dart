@@ -39,7 +39,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   List<Map<String, dynamic>> chatMessages = [
-    {"role": "system", "content": "You are a helpful assistant."},
+    //{"role": "system", "content": "You are a helpful assistant."},
   ];
   bool isDarkMode = true; // Set default theme to dark mode
   bool showHistory = false;
@@ -200,7 +200,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     final data = {
-      "model": "llama3.2",
+      "model": "lumin",
       "messages": chatMessages,
       "stream": false,
     };
@@ -391,7 +391,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _loadChatSession(int index) {
     setState(() {
       chatMessages = [
-        {"role": "system", "content": "You are a helpful assistant."},
+        //{"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": messageHistory[index].message},
         {"role": "system", "content": messageHistory[index].response},
       ];
@@ -980,7 +980,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _startNewChat() {
     setState(() {
       chatMessages = [
-        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": "Clear all the previous messages and start a new chat."},
       ];
       showHistory = false;
     });
