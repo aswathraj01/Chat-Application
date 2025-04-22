@@ -9,6 +9,19 @@ import 'package:flutter_tts/flutter_tts.dart'; // Add this import
 import 'user_settings_screen.dart';
 import 'support_screen.dart';
 
+
+String systemPrompt = "";
+
+Future<void> loadSystemPrompt() async {
+  try {
+    systemPrompt = await rootBundle.loadString('assets/system_prompt.txt');
+    print("Prompt Loaded: $systemPrompt");
+  } catch (e) {
+    print("Error loading prompt: $e");
+  }
+}
+
+
 class ChatHistoryItem {
   final String message;
   final String response;
@@ -39,7 +52,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   List<Map<String, dynamic>> chatMessages = [
-    //{"role": "system", "content": "You are a helpful assistant."},
+    {"role": "system", "content": systemPrompt},
+
   ];
   bool isDarkMode = true; // Set default theme to dark mode
   bool showHistory = false;
@@ -69,6 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _speech = stt.SpeechToText();
     _initializeSpeech();
     _loadMessageHistory();
+    loadSystemPrompt();
   }
 
   void _initializeSpeech() async {
@@ -201,7 +216,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final data = {
       "model": "lumin",
-      "messages": chatMessages,
+      "messages": [{"role": "system", "content": systemPrompt},
+        {"role": "user", "content": prompt}],
       "stream": false,
     };
 
@@ -391,7 +407,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _loadChatSession(int index) {
     setState(() {
       chatMessages = [
-        //{"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": systemPrompt},
         {"role": "user", "content": messageHistory[index].message},
         {"role": "system", "content": messageHistory[index].response},
       ];
@@ -980,7 +996,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _startNewChat() {
     setState(() {
       chatMessages = [
-        {"role": "system", "content": "Clear all the previous messages and start a new chat."},
+        {"role": "system", "content": systemPrompt},
       ];
       showHistory = false;
     });
