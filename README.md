@@ -2,7 +2,7 @@
 
 A chat application built for mobile devices as well as for Windows, based on Flutter, Django, and Llama. This application supports various features such as message translation, editing, deleting, and reactions.
 
-![Chat Application](https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif)
+![Chat Application](https://i.pinimg.com/originals/fb/f4/b4/fbf4b4b5b982c142d6b25d8bf45daa40.gif)
 
 ## Features
 
